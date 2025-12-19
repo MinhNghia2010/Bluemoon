@@ -9,6 +9,12 @@ import { HouseholdDetailModal } from './households/HouseholdDetailModal';
 import { householdsApi, paymentsApi } from '@/lib/api';
 import { toast } from 'sonner';
 
+interface HouseholdMember {
+  id: string;
+  name: string;
+  profilePic?: string | null;
+}
+
 interface Household {
   id: string;
   unit: string;
@@ -22,6 +28,7 @@ interface Household {
   phone: string;
   email: string;
   overdueCount?: number;
+  members?: HouseholdMember[];
 }
 
 type ViewMode = 'list' | 'add' | 'edit';

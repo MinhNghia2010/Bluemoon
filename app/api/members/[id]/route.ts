@@ -78,6 +78,7 @@ export async function PUT(
         name: data.name,
         dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
         cccd: data.cccd,
+        profilePic: data.profilePic !== undefined ? (data.profilePic || null) : undefined,
         householdId: data.householdId !== undefined ? (data.householdId || null) : undefined
       },
       include: {

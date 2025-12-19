@@ -1,3 +1,9 @@
+interface HouseholdMember {
+  id: string;
+  name: string;
+  profilePic?: string | null;
+}
+
 interface Household {
   id: string;
   unit: string;
@@ -7,11 +13,47 @@ interface Household {
   balance: number;
   phone: string;
   email: string;
+  members?: HouseholdMember[];
 }
 
 interface HouseholdListProps {
   households: Household[];
   onHouseholdClick: (household: Household) => void;
+}
+
+// Avatar component for members
+function MemberAvatar({ member, size = 24 }: { member: HouseholdMember; size?: number }) {
+  if (member.profilePic) {
+    return (
+      <img 
+        src={member.profilePic} 
+        alt={member.name}
+        className="rounded-full object-cover border-2 border-bg-white"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  
+  // Default avatar with initials
+  const colors = [
+    'from-purple-500 to-purple-600',
+    'from-blue-500 to-blue-600', 
+    'from-green-500 to-green-600',
+    'from-orange-500 to-orange-600',
+    'from-pink-500 to-pink-600'
+  ];
+  const colorIndex = member.name.charCodeAt(0) % colors.length;
+  
+  return (
+    <div 
+      className={`rounded-full bg-gradient-to-br ${colors[colorIndex]} flex items-center justify-center border-2 border-bg-white`}
+      style={{ width: size, height: size }}
+    >
+      <span className="text-white font-semibold" style={{ fontSize: size * 0.4 }}>
+        {member.name.charAt(0).toUpperCase()}
+      </span>
+    </div>
+  );
 }
 
 export function HouseholdList({ households, onHouseholdClick }: HouseholdListProps) {
@@ -59,10 +101,28 @@ export function HouseholdList({ households, onHouseholdClick }: HouseholdListPro
               </div>
             </div>
 
-            <div className="flex items-center gap-[8px]">
-              <img alt="" className="block size-[24px] rounded-full" src="/images/68ebe80fab5d1aee1888ff091f8c21c55b7adb2b.png" />
-              <img alt="" className="block size-[24px] rounded-full" src="/images/61ee1b938078bdee53664108367ad387382ae647.png" />
-              <img alt="" className="block size-[24px] rounded-full" src="/images/bbacbe45760530f87ab791097144e6fe9bbe34f5.png" />
+            <div className="flex items-center gap-[-8px]">
+              {household.members && household.members.length > 0 ? (
+                <>
+                  {household.members.slice(0, 4).map((member, index) => (
+                    <div key={member.id} style={{ marginLeft: index > 0 ? -8 : 0, zIndex: 4 - index }}>
+                      <MemberAvatar member={member} size={28} />
+                    </div>
+                  ))}
+                  {household.members.length > 4 && (
+                    <div 
+                      className="rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center border-2 border-bg-white"
+                      style={{ width: 28, height: 28, marginLeft: -8 }}
+                    >
+                      <span className="text-text-secondary text-xs font-medium">
+                        +{household.members.length - 4}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <span className="text-text-secondary text-xs">No members</span>
+              )}
             </div>
           </div>
         );

@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
         name: data.name,
         dateOfBirth: new Date(data.dateOfBirth),
         cccd: data.cccd,
+        profilePic: data.profilePic || null,
         householdId: data.householdId || null
       },
       include: {

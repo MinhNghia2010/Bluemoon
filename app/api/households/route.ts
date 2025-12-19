@@ -27,7 +27,13 @@ export async function GET(request: NextRequest) {
     const households = await prisma.household.findMany({
       where,
       include: {
-        members: true,
+        members: {
+          select: {
+            id: true,
+            name: true,
+            profilePic: true
+          }
+        },
         payments: {
           where: { status: 'pending' },
           select: { amount: true }
@@ -41,6 +47,7 @@ export async function GET(request: NextRequest) {
       ...household,
       residents: household.members.length,
       balance: household.payments.reduce((sum, p) => sum + p.amount, 0),
+      members: household.members, // Keep members for avatar display
       payments: undefined
     }))
 

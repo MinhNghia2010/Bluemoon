@@ -21,6 +21,14 @@ interface HouseholdMember {
   name: string;
   dateOfBirth: string;
   cccd: string;
+  profilePic?: string | null;
+}
+
+// Simplified member type for household prop (modal fetches full data separately)
+interface HouseholdMemberBasic {
+  id: string;
+  name: string;
+  profilePic?: string | null;
 }
 
 interface Household {
@@ -35,7 +43,7 @@ interface Household {
   balance: number;
   phone: string;
   email: string;
-  members?: HouseholdMember[];
+  members?: HouseholdMemberBasic[];
 }
 
 interface HouseholdDetailModalProps {
@@ -203,11 +211,19 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
               {members.map(member => (
                 <div key={member.id} className="flex items-center justify-between p-4 bg-bg-white rounded-xl border border-border-light shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-primary to-brand-primary/70 flex items-center justify-center shrink-0">
-                      <span className="text-white font-semibold text-lg">
-                        {member.name.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                    {member.profilePic ? (
+                      <img 
+                        src={member.profilePic} 
+                        alt={member.name}
+                        className="w-12 h-12 rounded-full object-cover shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-primary to-brand-primary/70 flex items-center justify-center shrink-0">
+                        <span className="text-white font-semibold text-lg">
+                          {member.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                     <div>
                       <p className="font-semibold text-text-primary text-base">{member.name}</p>
                       <div className="flex gap-6 text-sm mt-1">

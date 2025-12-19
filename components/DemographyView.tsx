@@ -22,6 +22,7 @@ interface HouseholdMember {
   name: string
   dateOfBirth: string
   cccd: string
+  profilePic?: string | null
   householdId: string | null
   household: {
     id: string
@@ -74,7 +75,7 @@ export function DemographyView() {
     }
   }
 
-  const handleSave = async (data: { name: string; dateOfBirth: string; cccd: string; householdId: string | null }) => {
+  const handleSave = async (data: { name: string; dateOfBirth: string; cccd: string; profilePic: string | null; householdId: string | null }) => {
     try {
       const url = editingMember ? `/api/members/${editingMember.id}` : '/api/members'
       const method = editingMember ? 'PUT' : 'POST'
@@ -291,7 +292,7 @@ export function DemographyView() {
 interface MemberFormProps {
   member: HouseholdMember | null
   households: Household[]
-  onSave: (data: { name: string; dateOfBirth: string; cccd: string; householdId: string | null }) => void
+  onSave: (data: { name: string; dateOfBirth: string; cccd: string; profilePic: string | null; householdId: string | null }) => void
   onCancel: () => void
 }
 
@@ -300,6 +301,7 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
     name: '',
     dateOfBirth: '',
     cccd: '',
+    profilePic: '',
     householdId: ''
   })
   const [datePickerOpen, setDatePickerOpen] = useState(false)
@@ -312,6 +314,7 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
         name: member.name,
         dateOfBirth: format(new Date(member.dateOfBirth), 'yyyy-MM-dd'),
         cccd: member.cccd,
+        profilePic: member.profilePic || '',
         householdId: member.householdId || ''
       })
     }
@@ -341,6 +344,7 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
         name: formData.name,
         dateOfBirth: formData.dateOfBirth,
         cccd: formData.cccd,
+        profilePic: formData.profilePic || null,
         householdId: formData.householdId || null
       })
     }
@@ -478,6 +482,41 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
                 </PopoverContent>
               </Popover>
               <p className="mt-1 text-xs text-text-secondary">Leave empty if not assigned to a household</p>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-text-primary mb-2">Profile Picture URL (Optional)</label>
+              <div className="flex gap-4 items-start">
+                <div className="flex-1">
+                  <input
+                    type="url"
+                    value={formData.profilePic}
+                    onChange={(e) => setFormData(prev => ({ ...prev, profilePic: e.target.value }))}
+                    placeholder="https://example.com/photo.jpg"
+                    className="input-default text-sm"
+                  />
+                  <p className="mt-1 text-xs text-text-secondary">Enter a URL to an image (optional)</p>
+                </div>
+                {/* Preview */}
+                <div className="shrink-0">
+                  {formData.profilePic ? (
+                    <img 
+                      src={formData.profilePic} 
+                      alt="Preview"
+                      className="w-16 h-16 rounded-full object-cover border-2 border-border-light"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-primary to-brand-primary/70 flex items-center justify-center">
+                      <span className="text-white font-semibold text-xl">
+                        {formData.name ? formData.name.charAt(0).toUpperCase() : '?'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

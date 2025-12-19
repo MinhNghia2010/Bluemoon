@@ -50,6 +50,7 @@ model HouseholdMember {
   name        String    // Full name
   dateOfBirth DateTime  // Date of birth
   cccd        String    @unique // Căn cước công dân (National ID)
+  profilePic  String?   // Optional profile picture URL
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
