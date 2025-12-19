@@ -113,10 +113,12 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
     e.preventDefault();
     if (!validateForm()) return;
 
+    const electricityUsage = parseFloat(formData.electricityUsage) || 0;
+    const waterUsage = parseFloat(formData.waterUsage) || 0;
+
     onSave({
-      householdId: formData.householdId,
-      type: formData.type as UtilityBill['type'],
       ...formData,
+      type: formData.type as UtilityBill['type'],
       electricityUsage,
       electricityCost: calculatedCosts.electricityCost,
       waterUsage,
