@@ -1,0 +1,91 @@
+# BlueMoon v2.0 - Apartment Fee Management App
+
+A modern apartment fee management system built with **Next.js 14** and **Tailwind CSS v4**.
+
+## Features
+
+- 🏠 **Households Management** - Track residents and apartment units
+- 💰 **Fee Categories** - Define and manage different types of fees
+- 💳 **Fee Collection** - Track payments and outstanding balances
+- 📊 **Statistics** - Visual reports and analytics with charts
+- 🚗 **Parking Management** - Manage parking slots and assignments
+- ⚡ **Utilities Tracking** - Monitor utility bills
+- ⚙️ **Settings** - System configuration and preferences
+- 🌙 **Dark Mode** - Full dark mode support
+
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Styling**: Tailwind CSS v4.0
+- **UI Components**: Radix UI primitives
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **State Management**: React useState hooks
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18.x or higher
+- npm or yarn
+
+### Installation
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Run the development server:
+```bash
+npm run dev
+```
+
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### Build for Production
+
+```bash
+npm run build
+npm start
+```
+
+## Project Structure
+
+```
+/
+├── app/                  # Next.js App Router
+│   ├── globals.css       # Global styles & Tailwind config
+│   ├── layout.tsx        # Root layout
+│   └── page.tsx          # Home page
+├── components/           # React components
+│   ├── Dashboard.tsx     # Main dashboard
+│   ├── Login.tsx         # Login page
+│   ├── Sidebar.tsx       # Navigation sidebar
+│   ├── Header.tsx        # Top header
+│   ├── households/       # Household-related components
+│   ├── fee-categories/   # Fee category components
+│   ├── fee-collection/   # Fee collection components
+│   ├── statistics/       # Charts and stats
+│   ├── settings/         # Settings components
+│   ├── shared/           # Reusable components
+│   └── ui/               # UI primitives
+├── imports/              # SVG path data
+├── public/               # Static assets
+│   └── images/           # Image assets
+└── src/                  # Documentation
+```
+
+## Demo Credentials
+
+- **Username**: `1`
+- **Password**: `1`
+
+## Design
+
+The original design is available on Figma: [Apartment Fee Management App](https://www.figma.com/design/V3IIcQXXjtOfOmYWv34wsB/Apartment-Fee-Management-App)
+
+## License
+
+MIT
+  

@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// User model for authentication
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  name      String
+  email     String   @unique
+  role      String   @default("admin") // admin, manager, staff
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Household model - apartment units and residents
+model Household {
+  id        String   @id @default(cuid())
+  unit      String   @unique // e.g., "A-101"
+  ownerName String
+  residents Int      @default(1)
+  phone     String
+  email     String
+  status    String   @default("active") // active, inactive
+  balance   Float    @default(0) // Outstanding balance (pending + overdue payments)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  payments     Payment[]
+  parkingSlots ParkingSlot[]
+  utilityBills UtilityBill[]
+}
+
+// Fee Category model - types of fees
+model FeeCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  amount      Float
+  frequency   String   // monthly, quarterly, annual, one-time
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  payments Payment[]
+}
+
+// Payment model - fee collection records
+model Payment {
+  id            String    @id @default(cuid())
+  amount        Float
+  status        String    @default("pending") // pending, collected, overdue
+  dueDate       DateTime
+  paymentDate   DateTime?
+  paymentMethod String?   // cash, bank_transfer, card
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  householdId   String
+  household     Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  feeCategoryId String
+  feeCategory   FeeCategory @relation(fields: [feeCategoryId], references: [id], onDelete: Cascade)
+}
+
+// Parking Slot model
+model ParkingSlot {
+  id           String   @id @default(cuid())
+  slotNumber   String   @unique // e.g., "P-001"
+  type         String   // car, motorcycle, bicycle
+  licensePlate String?  // Vehicle license plate number
+  status       String   @default("available") // available, occupied, reserved
+  monthlyFee   Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  householdId String?
+  household   Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
+}
+
+// Utility Bill model
+model UtilityBill {
+  id          String    @id @default(cuid())
+  type        String    // electricity, water, gas, internet
+  amount      Float
+  periodStart DateTime
+  periodEnd   DateTime
+  dueDate     DateTime
+  status      String    @default("pending") // pending, paid, overdue
+  paidDate    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+}
+
+// Settings model - system configuration
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

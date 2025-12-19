@@ -1,0 +1,374 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@custom-variant dark (&:is(.dark *));
+
+/* Import Inter font from Google Fonts */
+
+:root {
+  /* BlueMoon Brand Colors */
+  --brand-primary: #5030e5;
+  --brand-primary-hover: #4024c4;
+  --brand-primary-light: rgba(80, 48, 229, 0.08);
+  --brand-primary-medium: rgba(80, 48, 229, 0.2);
+  
+  /* Category/Chart Colors */
+  --color-maintenance: #5030e5;
+  --color-parking: #7AC555;
+  --color-utilities: #d58d49;
+  --color-parking-light: rgba(122, 197, 85, 0.2);
+  --color-utilities-light: rgba(213, 141, 73, 0.2);
+  
+  /* Text Colors */
+  --text-primary: #0d062d;
+  --text-secondary: #787486;
+  --text-white: #ffffff;
+  
+  /* Status Colors */
+  --status-paid: #68D391;
+  --status-pending: #FFA500;
+  --status-overdue: #FC8181;
+  
+  /* Feedback Colors */
+  --error: #D34B5E;
+  --success: #68D391;
+  
+  /* Background Colors */
+  --bg-page: #f5f5f5;
+  --bg-white: #ffffff;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: #f8f9fa;
+  --input-bg: #f1f3f5;
+  
+  /* Border Colors */
+  --border-default: #787486;
+  --border-light: rgba(0, 0, 0, 0.1);
+  --border-sidebar: rgba(255, 255, 255, 0.2);
+  
+  /* Neutral Colors */
+  --neutral-50: #f8f9fa;
+  --neutral-100: #f1f3f5;
+  --neutral-200: #e9ecef;
+  --neutral-300: #dee2e6;
+  --neutral-400: #ced4da;
+  --neutral-500: #adb5bd;
+  --neutral-600: #868e96;
+  --neutral-700: #495057;
+  --neutral-800: #343a40;
+  --neutral-900: #212529;
+  
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-lg: 16px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  
+  /* Legacy variables for compatibility */
+  --font-size: 16px;
+  --background: #f5f5f5;
+  --foreground: #0d062d;
+  --card: #ffffff;
+  --card-foreground: #0d062d;
+  --primary: #5030e5;
+  --primary-foreground: #ffffff;
+  --secondary: #787486;
+  --muted: #f1f3f5;
+  --muted-foreground: #787486;
+  --destructive: #D34B5E;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --ring: #5030e5;
+  --radius: 0.5rem;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+}
+
+/* Dark Mode Colors */
+.dark {
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  
+  /* Background Colors */
+  --bg-page: #171821;
+  --bg-white: #21222D;
+  --bg-sidebar: #21222D;
+  --bg-card: #2a2b38;
+  --bg-hover: #32333f;
+  --input-bg: #2a2b38;
+  
+  /* Border Colors */
+  --border-default: #3a3b47;
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-sidebar: rgba(255, 255, 255, 0.08);
+  
+  /* Neutral Colors (inverted) */
+  --neutral-50: #2a2b38;
+  --neutral-100: #32333f;
+  --neutral-200: #3a3b47;
+  --neutral-300: #4a4b57;
+  --neutral-400: #6b6c78;
+  --neutral-500: #9ca3af;
+  --neutral-600: #d1d5db;
+  --neutral-700: #e5e7eb;
+  --neutral-800: #f3f4f6;
+  --neutral-900: #f9fafb;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.7);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.8);
+  
+  /* Legacy variables */
+  --background: #171821;
+  --foreground: #ffffff;
+  --card: #21222D;
+  --card-foreground: #ffffff;
+  --muted: #32333f;
+  --muted-foreground: #9ca3af;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+@theme inline {
+  /* Brand Colors */
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  
+  /* Text Colors */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-white: var(--text-white);
+  
+  /* Status Colors */
+  --color-status-paid: var(--status-paid);
+  --color-status-pending: var(--status-pending);
+  --color-status-overdue: var(--status-overdue);
+  
+  /* Feedback Colors */
+  --color-error: var(--error);
+  --color-success: var(--success);
+  
+  /* Background Colors */
+  --color-bg-page: var(--bg-page);
+  --color-bg-white: var(--bg-white);
+  --color-bg-sidebar: var(--bg-sidebar);
+  --color-bg-card: var(--bg-card);
+  --color-bg-hover: var(--bg-hover);
+  
+  /* Border Colors */
+  --color-border-default: var(--border-default);
+  --color-border-light: var(--border-light);
+  --color-border-sidebar: var(--border-sidebar);
+  
+  /* Neutral Colors */
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+  
+  /* Legacy compatibility */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border-light;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  body {
+    @apply bg-bg-page text-text-primary;
+  }
+}
+
+/**
+ * Base typography - using Tailwind's default text sizes
+ */
+@layer base {
+  h1 {
+    @apply text-3xl font-semibold text-text-primary;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold text-text-primary;
+  }
+
+  h3 {
+    @apply text-xl font-medium text-text-primary;
+  }
+
+  h4 {
+    @apply text-lg font-medium text-text-primary;
+  }
+
+  p {
+    @apply text-base text-text-primary;
+  }
+
+  label {
+    @apply text-sm font-medium text-text-primary;
+  }
+}
+
+/* Utility Classes */
+@layer utilities {
+  /* Brand Colors */
+  .bg-brand-primary {
+    background-color: var(--brand-primary);
+  }
+  
+  .bg-brand-primary-hover {
+    background-color: var(--brand-primary-hover);
+  }
+  
+  .bg-brand-primary-light {
+    background-color: var(--brand-primary-light);
+  }
+  
+  .bg-brand-primary-medium {
+    background-color: var(--brand-primary-medium);
+  }
+  
+  .text-brand-primary {
+    color: var(--brand-primary);
+  }
+  
+  .border-brand-primary {
+    border-color: var(--brand-primary);
+  }
+  
+  /* Category/Chart Colors */
+  .bg-color-parking-light {
+    background-color: var(--color-parking-light);
+  }
+  
+  .bg-color-utilities-light {
+    background-color: var(--color-utilities-light);
+  }
+  
+  .text-color-parking {
+    color: var(--color-parking);
+  }
+  
+  .text-color-utilities {
+    color: var(--color-utilities);
+  }
+  
+  /* Buttons */
+  .btn-primary {
+    background-color: var(--brand-primary);
+    color: var(--text-white);
+    padding: 12px 24px;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-primary:hover {
+    background-color: var(--brand-primary-hover);
+  }
+  
+  .btn-secondary {
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+    padding: 12px 24px;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+  
+  .btn-secondary:hover {
+    background-color: var(--bg-hover);
+  }
+  
+  /* Inputs */
+  .input-default {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    background-color: var(--input-bg);
+  }
+  
+  .input-default:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+  }
+  
+  .input-default::placeholder {
+    color: var(--text-secondary);
+  }
+  
+  /* Cards */
+  .card {
+    background-color: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+  }
+  
+  /* Status Badges */
+  .status-paid {
+    color: var(--status-paid);
+    background-color: rgba(104, 211, 145, 0.1);
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+  }
+  
+  .status-pending {
+    color: var(--status-pending);
+    background-color: rgba(255, 165, 0, 0.1);
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+  }
+  
+  .status-overdue {
+    color: var(--status-overdue);
+    background-color: rgba(252, 129, 129, 0.1);
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+  }
+  
+  /* Hide scrollbar while maintaining scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}
+

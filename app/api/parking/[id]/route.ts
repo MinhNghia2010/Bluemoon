@@ -1,0 +1,101 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+
+// GET single parking slot
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+
+    const parkingSlot = await prisma.parkingSlot.findUnique({
+      where: { id },
+      include: {
+        household: true
+      }
+    })
+
+    if (!parkingSlot) {
+      return NextResponse.json(
+        { error: 'Parking slot not found' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json(parkingSlot)
+  } catch (error) {
+    console.error('Get parking slot error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// PUT update parking slot
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const data = await request.json()
+
+    const updateData: any = {}
+
+    if (data.type) updateData.type = data.type
+    if (data.monthlyFee) updateData.monthlyFee = parseFloat(data.monthlyFee)
+    if (data.status) updateData.status = data.status
+    if (data.licensePlate !== undefined) updateData.licensePlate = data.licensePlate || null
+
+    // Handle assignment/unassignment
+    if (data.householdId !== undefined) {
+      updateData.householdId = data.householdId || null
+      updateData.status = data.householdId ? 'occupied' : 'available'
+      // Clear license plate if unassigning
+      if (!data.householdId) {
+        updateData.licensePlate = null
+      }
+    }
+
+    const parkingSlot = await prisma.parkingSlot.update({
+      where: { id },
+      data: updateData,
+      include: {
+        household: true
+      }
+    })
+
+    return NextResponse.json(parkingSlot)
+  } catch (error) {
+    console.error('Update parking slot error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE parking slot
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+
+    await prisma.parkingSlot.delete({
+      where: { id }
+    })
+
+    return NextResponse.json({ message: 'Parking slot deleted successfully' })
+  } catch (error) {
+    console.error('Delete parking slot error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+

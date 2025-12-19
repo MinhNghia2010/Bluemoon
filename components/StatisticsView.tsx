@@ -1,0 +1,333 @@
+'use client'
+
+import { useState, useEffect } from 'react';
+import { Home, Receipt, Zap, Car, Droplets, Flame, Wifi, Motorbike, Bike } from 'lucide-react';
+import { PageHeader } from './shared/PageHeader';
+import { SummaryCard } from './shared/SummaryCard';
+import { FilterButtons } from './shared/FilterButtons';
+import { MonthlyRevenueChart } from './statistics/MonthlyRevenueChart';
+import { CategoryDistributionChart } from './statistics/CategoryDistributionChart';
+import { CollectionRateChart } from './statistics/CollectionRateChart';
+import { statisticsApi } from '@/lib/api';
+import { toast } from 'sonner';
+
+export function StatisticsView() {
+  const [stats, setStats] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'fees' | 'utilities' | 'parking'>('overview');
+
+  const fetchStatistics = async () => {
+    try {
+      setIsLoading(true);
+      const data = await statisticsApi.get();
+      setStats(data);
+    } catch (error) {
+      toast.error('Failed to load statistics');
+      console.error('Error fetching statistics:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatistics();
+  }, []);
+
+  // Format currency in USD
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  if (isLoading) {
+    return (
+      <div>
+        <PageHeader
+          title="Statistics"
+          description="Financial reports and payment analytics"
+        />
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Prepare monthly chart data with collected, pending, overdue
+  const monthlyData = (stats?.monthlyRevenue || []).map((item: any) => ({
+    month: new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short' }),
+    collected: item.collected || 0,
+    pending: item.pending || 0,
+    overdue: item.overdue || 0,
+    total: item.total || 0
+  }));
+
+  // Category distribution (fee categories only)
+  const categoryData = (stats?.categoryDistribution || [])
+    .filter((item: any) => item.totalValue > 0)
+    .map((item: any, index: number) => ({
+      name: item.name,
+      value: item.totalValue,
+      color: ['#5030e5', '#7AC555', '#d58d49', '#76A5EA', '#E4CCFD', '#FF6B6B'][index % 6]
+    }));
+
+  // Utility type distribution
+  const utilityTypeData = stats?.utilities?.byType ? [
+    { name: 'Electricity', value: stats.utilities.byType.electricity.amount, color: '#FFB020' },
+    { name: 'Water', value: stats.utilities.byType.water.amount, color: '#3B82F6' },
+    { name: 'Internet', value: stats.utilities.byType.internet.amount, color: '#10B981' },
+    { name: 'Gas', value: stats.utilities.byType.gas.amount, color: '#F97316' }
+  ].filter(item => item.value > 0) : [];
+
+  // Utility types config
+  const utilityTypes = [
+    { key: 'electricity', name: 'Electricity', color: '#FFB020', bgColor: 'bg-yellow-50 dark:bg-yellow-900/30', textColor: 'text-yellow-600 dark:text-yellow-400', icon: Zap },
+    { key: 'water', name: 'Water', color: '#3B82F6', bgColor: 'bg-blue-50 dark:bg-blue-900/30', textColor: 'text-blue-600 dark:text-blue-400', icon: Droplets },
+    { key: 'internet', name: 'Internet', color: '#10B981', bgColor: 'bg-green-50 dark:bg-green-900/30', textColor: 'text-green-600 dark:text-green-400', icon: Wifi },
+    { key: 'gas', name: 'Gas', color: '#F97316', bgColor: 'bg-orange-50 dark:bg-orange-900/30', textColor: 'text-orange-600 dark:text-orange-400', icon: Flame }
+  ];
+
+  // Vehicle types config
+  const vehicleTypes = [
+    { key: 'car', name: 'Cars', bgColor: 'bg-blue-50 dark:bg-blue-900/30', textColor: 'text-blue-600 dark:text-blue-400', icon: Car },
+    { key: 'motorcycle', name: 'Motorcycles', bgColor: 'bg-green-50 dark:bg-green-900/30', textColor: 'text-green-600 dark:text-green-400', icon: Motorbike },
+    { key: 'bicycle', name: 'Bicycles', bgColor: 'bg-yellow-50 dark:bg-yellow-900/30', textColor: 'text-yellow-600 dark:text-yellow-400', icon: Bike }
+  ];
+
+  // All fees distribution (for overview pie chart)
+  const feeCategoryColors = ['#5030e5', '#7AC555', '#d58d49', '#76A5EA', '#E4CCFD'];
+  
+  const allFeesData: { name: string; value: number; color: string }[] = [
+    // Fee categories
+    ...(stats?.categoryDistribution || [])
+      .filter((cat: any) => cat.totalValue > 0)
+      .map((cat: any, index: number) => ({
+        name: cat.name,
+        value: cat.totalValue,
+        color: feeCategoryColors[index % feeCategoryColors.length]
+      })),
+    // Utilities by type
+    ...utilityTypes
+      .filter(type => stats?.utilities?.byType?.[type.key]?.amount > 0)
+      .map(type => ({
+        name: type.name,
+        value: stats.utilities.byType[type.key].amount,
+        color: type.color
+      })),
+    // Parking revenue
+    ...(stats?.parking?.monthlyRevenue > 0 
+      ? [{ name: 'Parking', value: stats.parking.monthlyRevenue, color: '#8B5CF6' }] 
+      : [])
+  ];
+
+  // Collection rate data
+  const collectionRateData = monthlyData.map((item: any) => ({
+    month: item.month,
+    rate: item.total > 0 ? Math.round((item.collected / item.total) * 100) : 0
+  }));
+
+  // Tab content rendering
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        const overviewSummaryCards = [
+          { title: 'Total Collected', value: formatCurrency(stats?.financials?.totalCollected || 0), subtitle: 'All sources', dotColor: 'bg-[#7AC555]', valueColor: 'text-green-600 dark:text-green-400' },
+          { title: 'Total Pending', value: formatCurrency(stats?.financials?.totalPending || 0), subtitle: 'Awaiting payment', dotColor: 'bg-[#d58d49]', valueColor: 'text-orange-600 dark:text-orange-400' },
+          { title: 'Total Overdue', value: formatCurrency(stats?.financials?.totalOverdue || 0), subtitle: 'Past due date', dotColor: 'bg-[#D34B5E]', valueColor: 'text-red-600 dark:text-red-400' },
+          { title: 'Grand Total', value: formatCurrency(stats?.financials?.grandTotal || 0), subtitle: 'All fees combined', dotColor: 'bg-[#5030e5]', valueColor: 'text-purple-600 dark:text-purple-400' }
+        ];
+
+        const quickStats = [
+          { icon: Home, label: 'Households', value: stats?.overview?.totalHouseholds || 0, subtitle: `${stats?.overview?.activeHouseholds || 0} active`, bgColor: 'bg-purple-100 dark:bg-purple-900/30', iconColor: 'text-purple-600 dark:text-purple-400' },
+          { icon: Receipt, label: 'Fee Payments', value: stats?.overview?.totalPayments || 0, subtitle: `${stats?.overview?.feeCollectionRate || 0}% collected`, bgColor: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600 dark:text-blue-400' },
+          { icon: Zap, label: 'Utility Bills', value: stats?.overview?.totalUtilityBills || 0, subtitle: `${stats?.overview?.utilityCollectionRate || 0}% paid`, bgColor: 'bg-yellow-100 dark:bg-yellow-900/30', iconColor: 'text-yellow-600 dark:text-yellow-400' },
+          { icon: Car, label: 'Parking Slots', value: stats?.overview?.totalParkingSlots || 0, subtitle: `${stats?.overview?.occupiedParkingSlots || 0} occupied`, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' }
+        ];
+
+        return (
+          <>
+            {/* Grand Total Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+              {overviewSummaryCards.map((card, index) => (
+                <SummaryCard key={index} {...card} />
+              ))}
+            </div>
+
+            {/* Quick Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+              {quickStats.map((stat, index) => (
+                <div key={index} className="bg-bg-white rounded-lg p-5 shadow-lg border border-border-light">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`p-2 ${stat.bgColor} rounded-lg`}>
+                      <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
+                    </div>
+                    <span className="text-sm text-text-secondary">{stat.label}</span>
+                  </div>
+                  <p className="text-2xl font-bold text-text-primary">{stat.value}</p>
+                  <p className="text-xs text-text-secondary mt-1">{stat.subtitle}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Charts */}
+            <div className="space-y-5">
+              {monthlyData.length > 0 && <MonthlyRevenueChart data={monthlyData} />}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {allFeesData.length > 0 && (
+                  <CategoryDistributionChart data={allFeesData} title="All Fees Distribution" />
+                )}
+                {collectionRateData.length > 0 && <CollectionRateChart data={collectionRateData} />}
+              </div>
+            </div>
+          </>
+        );
+
+      case 'fees':
+        const feeSummaryCards = [
+          { title: 'Collected', value: formatCurrency(stats?.feePayments?.collected || 0), subtitle: `${stats?.overview?.collectedPayments || 0} payments`, dotColor: 'bg-[#7AC555]', valueColor: 'text-green-600 dark:text-green-400' },
+          { title: 'Pending', value: formatCurrency(stats?.feePayments?.pending || 0), subtitle: `${stats?.overview?.pendingPayments || 0} payments`, dotColor: 'bg-[#d58d49]', valueColor: 'text-orange-600 dark:text-orange-400' },
+          { title: 'Overdue', value: formatCurrency(stats?.feePayments?.overdue || 0), subtitle: `${stats?.overview?.overduePayments || 0} payments`, dotColor: 'bg-[#D34B5E]', valueColor: 'text-red-600 dark:text-red-400' },
+          { title: 'Collection Rate', value: `${stats?.overview?.feeCollectionRate || 0}%`, subtitle: `${stats?.overview?.totalPayments || 0} total`, dotColor: 'bg-[#5030e5]', valueColor: 'text-purple-600 dark:text-purple-400' }
+        ];
+
+        return (
+          <>
+            {/* Fee Payment Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+              {feeSummaryCards.map((card, index) => (
+                <SummaryCard key={index} {...card} />
+              ))}
+            </div>
+
+            {/* Category Breakdown */}
+            <div className="bg-bg-white rounded-lg p-6 shadow-lg border border-border-light mb-8">
+              <h3 className="font-semibold text-text-primary text-lg mb-4">Fee Categories</h3>
+              <div className="space-y-4">
+                {(stats?.categoryDistribution || []).map((cat: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-4 bg-bg-hover rounded-lg">
+                    <div>
+                      <p className="font-medium text-text-primary">{cat.name}</p>
+                      <p className="text-sm text-text-secondary">{cat.count} payments × {formatCurrency(cat.amount)}</p>
+                    </div>
+                    <p className="font-semibold text-text-primary">{formatCurrency(cat.totalValue)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {categoryData.length > 0 && <CategoryDistributionChart data={categoryData} />}
+          </>
+        );
+
+      case 'utilities':
+        const utilitySummaryCards = [
+          { title: 'Paid', value: formatCurrency(stats?.utilities?.paid || 0), subtitle: `${stats?.overview?.paidUtilityBills || 0} bills`, dotColor: 'bg-[#7AC555]', valueColor: 'text-green-600 dark:text-green-400' },
+          { title: 'Pending', value: formatCurrency(stats?.utilities?.pending || 0), subtitle: `${stats?.overview?.pendingUtilityBills || 0} bills`, dotColor: 'bg-[#d58d49]', valueColor: 'text-orange-600 dark:text-orange-400' },
+          { title: 'Overdue', value: formatCurrency(stats?.utilities?.overdue || 0), subtitle: `${stats?.overview?.overdueUtilityBills || 0} bills`, dotColor: 'bg-[#D34B5E]', valueColor: 'text-red-600 dark:text-red-400' },
+          { title: 'Collection Rate', value: `${stats?.overview?.utilityCollectionRate || 0}%`, subtitle: `${stats?.overview?.totalUtilityBills || 0} total`, dotColor: 'bg-[#5030e5]', valueColor: 'text-purple-600 dark:text-purple-400' }
+        ];
+
+        return (
+          <>
+            {/* Utility Bill Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+              {utilitySummaryCards.map((card, index) => (
+                <SummaryCard key={index} {...card} />
+              ))}
+            </div>
+
+            {/* Utility Type Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+              <div className="bg-bg-white rounded-lg p-6 shadow-lg border border-border-light">
+                <h3 className="font-semibold text-text-primary text-lg mb-4">By Utility Type</h3>
+                <div className="space-y-4">
+                  {utilityTypes.map((type) => (
+                    <div key={type.key} className={`flex items-center justify-between p-4 ${type.bgColor} rounded-lg`}>
+                      <div className="flex items-center gap-3">
+                        <type.icon className={`w-5 h-5 ${type.textColor}`} />
+                        <div>
+                          <p className="font-medium text-text-primary">{type.name}</p>
+                          <p className="text-sm text-text-secondary">{stats?.utilities?.byType?.[type.key]?.count || 0} bills</p>
+                        </div>
+                      </div>
+                      <p className="font-semibold text-text-primary">{formatCurrency(stats?.utilities?.byType?.[type.key]?.amount || 0)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {utilityTypeData.length > 0 && <CategoryDistributionChart data={utilityTypeData} />}
+            </div>
+          </>
+        );
+
+      case 'parking':
+        const parkingSummaryCards = [
+          { title: 'Total Slots', value: String(stats?.parking?.total || 0), subtitle: 'All parking spaces', dotColor: 'bg-[#5030e5]', valueColor: 'text-purple-600 dark:text-purple-400' },
+          { title: 'Occupied', value: String(stats?.parking?.occupied || 0), subtitle: 'Currently in use', dotColor: 'bg-[#7AC555]', valueColor: 'text-green-600 dark:text-green-400' },
+          { title: 'Available', value: String(stats?.parking?.available || 0), subtitle: 'Ready to rent', dotColor: 'bg-[#d58d49]', valueColor: 'text-orange-600 dark:text-orange-400' },
+          { title: 'Monthly Revenue', value: formatCurrency(stats?.parking?.monthlyRevenue || 0), subtitle: 'From occupied slots', dotColor: 'bg-[#76A5EA]', valueColor: 'text-blue-600 dark:text-blue-400' }
+        ];
+
+        return (
+          <>
+            {/* Parking Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+              {parkingSummaryCards.map((card, index) => (
+                <SummaryCard key={index} {...card} />
+              ))}
+            </div>
+
+            {/* Parking Type Breakdown */}
+            <div className="bg-bg-white rounded-lg p-6 shadow-lg border border-border-light">
+              <h3 className="font-semibold text-text-primary text-lg mb-4">By Vehicle Type</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {vehicleTypes.map((type) => (
+                  <div key={type.key} className={`flex items-center justify-between p-4 ${type.bgColor} rounded-lg`}>
+                    <div className="flex items-center gap-3">
+                      <type.icon className={`w-6 h-6 ${type.textColor}`} />
+                      <div>
+                        <p className="font-medium text-text-primary">{type.name}</p>
+                        <p className="text-sm text-text-secondary">Parking slots</p>
+                      </div>
+                    </div>
+                    <p className={`text-2xl font-bold ${type.textColor}`}>{stats?.parking?.byType?.[type.key] || 0}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        );
+    }
+  };
+
+  return (
+    <div>
+      {/* Header */}
+      <PageHeader
+        title="Statistics"
+        description="Comprehensive financial reports and analytics"
+      />
+
+      {/* Filters */}
+      <FilterButtons
+        filters={[
+          { id: 'overview', label: 'Overview' },
+          { id: 'fees', label: 'Fee Payments' },
+          { id: 'utilities', label: 'Utility Bills' },
+          { id: 'parking', label: 'Parking' }
+        ]}
+        activeFilter={activeTab}
+        onFilterChange={(id) => setActiveTab(id as typeof activeTab)}
+        variant="primary"
+      />
+
+      {/* Tab Content */}
+      {renderTabContent()}
+    </div>
+  );
+}
