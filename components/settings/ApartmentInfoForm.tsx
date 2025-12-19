@@ -1,21 +1,6 @@
 import { useState } from 'react';
 import { Building2 } from 'lucide-react';
 
-function VuesaxBulkColorfilter() {
-  return (
-    <div className="absolute contents inset-0" data-name="vuesax/bulk/colorfilter">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 24 24">
-        <g id="colorfilter">
-          <path d={svgPaths.p24d5ffc0} fill="var(--fill-0, #5030E5)" id="Vector" opacity="0.6" />
-          <path d={svgPaths.p960d370} fill="var(--fill-0, #5030E5)" id="Vector_2" />
-          <path d={svgPaths.p319717b0} fill="var(--fill-0, #5030E5)" id="Vector_3" opacity="0.4" />
-          <g id="Vector_4" opacity="0"></g>
-        </g>
-      </svg>
-    </div>
-  );
-}
-
 interface ApartmentInfoFormProps {
   onSuccess: (message: string) => void;
 }
