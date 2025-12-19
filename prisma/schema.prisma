@@ -24,21 +24,38 @@ model User {
 
 // Household model - apartment units and residents
 model Household {
-  id        String   @id @default(cuid())
-  unit      String   @unique // e.g., "A-101"
-  ownerName String
-  residents Int      @default(1)
-  phone     String
-  email     String
-  status    String   @default("active") // active, inactive
-  balance   Float    @default(0) // Outstanding balance (pending + overdue payments)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(cuid())
+  unit       String    @unique // e.g., "101", "102"
+  ownerName  String
+  area       Float?    // Area in m²
+  floor      Int?      // Floor number
+  moveInDate DateTime? // Move-in date
+  phone      String
+  email      String
+  status     String    @default("active") // active, inactive
+  balance    Float     @default(0) // Outstanding balance (pending + overdue payments)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   // Relations
+  members      HouseholdMember[]
   payments     Payment[]
   parkingSlots ParkingSlot[]
   utilityBills UtilityBill[]
+}
+
+// Household Member model - residents in a household
+model HouseholdMember {
+  id          String    @id @default(cuid())
+  name        String    // Full name
+  dateOfBirth DateTime  // Date of birth
+  cccd        String    @unique // Căn cước công dân (National ID)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  householdId String?
+  household   Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
 }
 
 // Fee Category model - types of fees

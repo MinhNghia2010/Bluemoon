@@ -14,6 +14,7 @@ export async function GET(
     const household = await prisma.household.findUnique({
       where: { id },
       include: {
+        members: true,
         payments: {
           include: { feeCategory: true },
           orderBy: { dueDate: 'desc' }
@@ -37,7 +38,7 @@ export async function GET(
       .filter(p => p.status === 'pending' || p.status === 'overdue')
       .reduce((sum, p) => sum + p.amount, 0)
 
-    return NextResponse.json({ ...household, balance })
+    return NextResponse.json({ ...household, residents: household.members.length, balance })
   } catch (error) {
     console.error('Get household error:', error)
     return NextResponse.json(
@@ -60,14 +61,19 @@ export async function PUT(
       where: { id },
       data: {
         ownerName: data.ownerName,
-        residents: data.residents,
+        area: data.area !== undefined ? (data.area ? parseFloat(data.area) : null) : undefined,
+        floor: data.floor !== undefined ? (data.floor ? parseInt(data.floor) : null) : undefined,
+        moveInDate: data.moveInDate !== undefined ? (data.moveInDate ? new Date(data.moveInDate) : null) : undefined,
         phone: data.phone,
         email: data.email,
         status: data.status
+      },
+      include: {
+        members: true
       }
     })
 
-    return NextResponse.json(household)
+    return NextResponse.json({ ...household, residents: household.members.length })
   } catch (error) {
     console.error('Update household error:', error)
     return NextResponse.json(

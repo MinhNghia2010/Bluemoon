@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const search = searchParams.get('search')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     
     if (status && status !== 'all') {
       where.status = status
@@ -18,15 +18,16 @@ export async function GET(request: NextRequest) {
     
     if (search) {
       where.OR = [
-        { unit: { contains: search } },
-        { ownerName: { contains: search } },
-        { email: { contains: search } }
+        { unit: { contains: search, mode: 'insensitive' } },
+        { ownerName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
       ]
     }
 
     const households = await prisma.household.findMany({
       where,
       include: {
+        members: true,
         payments: {
           where: { status: 'pending' },
           select: { amount: true }
@@ -35,9 +36,10 @@ export async function GET(request: NextRequest) {
       orderBy: { unit: 'asc' }
     })
 
-    // Calculate balance for each household
+    // Calculate balance for each household and add member count
     const householdsWithBalance = households.map(household => ({
       ...household,
+      residents: household.members.length,
       balance: household.payments.reduce((sum, p) => sum + p.amount, 0),
       payments: undefined
     }))
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
 
-    const { unit, ownerName, residents, phone, email } = data
+    const { unit, ownerName, area, floor, moveInDate, phone, email } = data
 
     if (!unit || !ownerName || !phone || !email) {
       return NextResponse.json(
@@ -82,14 +84,19 @@ export async function POST(request: NextRequest) {
       data: {
         unit,
         ownerName,
-        residents: residents || 1,
+        area: area ? parseFloat(area) : null,
+        floor: floor ? parseInt(floor) : null,
+        moveInDate: moveInDate ? new Date(moveInDate) : null,
         phone,
         email,
         status: 'active'
+      },
+      include: {
+        members: true
       }
     })
 
-    return NextResponse.json(household, { status: 201 })
+    return NextResponse.json({ ...household, residents: household.members.length }, { status: 201 })
   } catch (error) {
     console.error('Create household error:', error)
     return NextResponse.json(

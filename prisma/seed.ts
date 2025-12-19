@@ -11,6 +11,7 @@ async function main() {
   await prisma.payment.deleteMany()
   await prisma.utilityBill.deleteMany()
   await prisma.parkingSlot.deleteMany()
+  await prisma.householdMember.deleteMany()
   await prisma.feeCategory.deleteMany()
   await prisma.household.deleteMany()
   await prisma.setting.deleteMany()
@@ -67,75 +68,87 @@ async function main() {
   ])
   console.log('✅ Created', categories.length, 'fee categories')
 
-  // Create sample households (English names)
+  // Create sample households
   const households = await Promise.all([
     prisma.household.upsert({
-      where: { unit: 'A-101' },
+      where: { unit: '101' },
       update: {},
       create: {
-        unit: 'A-101',
-        ownerName: 'John Smith',
-        residents: 4,
+        unit: '101',
+        ownerName: 'Doctor who',
+        area: 70,
+        floor: 1,
+        moveInDate: new Date('2025-12-01'),
         phone: '0901234567',
-        email: 'john.smith@email.com',
+        email: 'doctorwho@email.com',
         status: 'active'
       }
     }),
     prisma.household.upsert({
-      where: { unit: 'A-102' },
+      where: { unit: '102' },
       update: {},
       create: {
-        unit: 'A-102',
-        ownerName: 'Sarah Johnson',
-        residents: 2,
+        unit: '102',
+        ownerName: 'Doctor 12',
+        area: 65,
+        floor: 1,
+        moveInDate: new Date('2025-12-02'),
         phone: '0912345678',
-        email: 'sarah.johnson@email.com',
+        email: 'doctor12@email.com',
         status: 'active'
       }
     }),
     prisma.household.upsert({
-      where: { unit: 'A-103' },
+      where: { unit: '103' },
       update: {},
       create: {
-        unit: 'A-103',
-        ownerName: 'Michael Chen',
-        residents: 3,
+        unit: '103',
+        ownerName: 'Lê Vũ Nguyên Hoàng',
+        area: 75,
+        floor: 1,
+        moveInDate: new Date('2025-11-12'),
         phone: '0923456789',
-        email: 'michael.chen@email.com',
+        email: 'hoang.le@email.com',
         status: 'active'
       }
     }),
     prisma.household.upsert({
-      where: { unit: 'B-201' },
+      where: { unit: '201' },
       update: {},
       create: {
-        unit: 'B-201',
+        unit: '201',
         ownerName: 'David Wilson',
-        residents: 5,
+        area: 80,
+        floor: 2,
+        moveInDate: new Date('2025-10-15'),
         phone: '0934567890',
         email: 'david.wilson@email.com',
         status: 'active'
       }
     }),
     prisma.household.upsert({
-      where: { unit: 'B-202' },
+      where: { unit: '202' },
       update: {},
       create: {
-        unit: 'B-202',
+        unit: '202',
         ownerName: 'Emily Brown',
-        residents: 2,
+        area: 70,
+        floor: 2,
+        moveInDate: new Date('2025-09-01'),
         phone: '0945678901',
         email: 'emily.brown@email.com',
         status: 'active'
       }
     }),
     prisma.household.upsert({
-      where: { unit: 'C-301' },
+      where: { unit: '301' },
       update: {},
       create: {
-        unit: 'C-301',
+        unit: '301',
         ownerName: 'Robert Taylor',
-        residents: 4,
+        area: 85,
+        floor: 3,
+        moveInDate: new Date('2025-08-20'),
         phone: '0956789012',
         email: 'robert.taylor@email.com',
         status: 'active'
@@ -143,6 +156,89 @@ async function main() {
     })
   ])
   console.log('✅ Created', households.length, 'households')
+
+  // Create household members
+  const members = await Promise.all([
+    // Room 101 - 2 members
+    prisma.householdMember.create({
+      data: {
+        name: 'Doctor who',
+        dateOfBirth: new Date('2025-12-17'),
+        cccd: '34',
+        householdId: households[0].id
+      }
+    }),
+    prisma.householdMember.create({
+      data: {
+        name: 'Doctor 11',
+        dateOfBirth: new Date('2025-12-01'),
+        cccd: '123',
+        householdId: households[0].id
+      }
+    }),
+    // Room 102 - 1 member
+    prisma.householdMember.create({
+      data: {
+        name: 'Doctor 12',
+        dateOfBirth: new Date('2025-12-02'),
+        cccd: '6969',
+        householdId: households[1].id
+      }
+    }),
+    // Room 103 - 1 member
+    prisma.householdMember.create({
+      data: {
+        name: 'Lê Vũ Nguyên Hoàng',
+        dateOfBirth: new Date('2005-11-12'),
+        cccd: '030696969696',
+        householdId: households[2].id
+      }
+    }),
+    // Room 201 - 2 members
+    prisma.householdMember.create({
+      data: {
+        name: 'David Wilson',
+        dateOfBirth: new Date('1985-03-15'),
+        cccd: '001234567890',
+        householdId: households[3].id
+      }
+    }),
+    prisma.householdMember.create({
+      data: {
+        name: 'Linda Wilson',
+        dateOfBirth: new Date('1987-07-22'),
+        cccd: '001234567891',
+        householdId: households[3].id
+      }
+    }),
+    // Room 202 - 1 member
+    prisma.householdMember.create({
+      data: {
+        name: 'Emily Brown',
+        dateOfBirth: new Date('1990-05-10'),
+        cccd: '002345678901',
+        householdId: households[4].id
+      }
+    }),
+    // Room 301 - 2 members
+    prisma.householdMember.create({
+      data: {
+        name: 'Robert Taylor',
+        dateOfBirth: new Date('1982-09-08'),
+        cccd: '003456789012',
+        householdId: households[5].id
+      }
+    }),
+    prisma.householdMember.create({
+      data: {
+        name: 'Maria Taylor',
+        dateOfBirth: new Date('1984-11-25'),
+        cccd: '003456789013',
+        householdId: households[5].id
+      }
+    })
+  ])
+  console.log('✅ Created', members.length, 'household members')
 
   // Create parking slots with license plates linked to households
   const parkingSlots = await Promise.all([
