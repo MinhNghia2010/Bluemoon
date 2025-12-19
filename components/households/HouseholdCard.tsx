@@ -33,8 +33,8 @@ export function HouseholdCard({ household, onClick, getStatusColor }: HouseholdC
             <p className="text-text-secondary text-sm">{household.ownerName}</p>
           </div>
         </div>
-        <div className={`${household.status === 'active' ? 'bg-[rgba(122,197,85,0.2)]' : 'bg-neutral-100'} px-[12px] py-[4px] rounded-[4px]`}>
-          <p className={`font-medium text-xs ${household.status === 'active' ? 'text-[#7AC555]' : 'text-text-secondary'}`}>
+        <div className={`${statusColor.bg} px-[12px] py-[4px] rounded-[4px]`}>
+          <p className={`font-medium text-xs ${statusColor.text}`}>
             {household.status}
           </p>
         </div>

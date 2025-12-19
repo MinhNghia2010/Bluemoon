@@ -694,7 +694,7 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <span className="text-sm font-medium text-text-primary">Due Date *</span>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -722,7 +722,7 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
                     </Popover>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     <span className="text-sm font-medium text-text-primary">Initial Status</span>
                     <div className="relative" ref={bulkStatusRef}>
                       <button
