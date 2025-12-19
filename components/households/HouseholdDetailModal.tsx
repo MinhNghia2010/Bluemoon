@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Trash2, AlertTriangle, Plus, UserMinus, Edit2, Building2 } from 'lucide-react';
+import { Trash2, AlertTriangle, Plus, UserMinus, Edit2, Building2, CalendarIcon } from 'lucide-react';
 import { Modal } from '../shared/Modal';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -107,10 +109,10 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
   const statusColor = getStatusColor(household.status);
 
   return (
-    <Modal isOpen={!!household} onClose={onClose}>
-      <div className="max-h-[80vh] overflow-y-auto">
+    <Modal isOpen={!!household} onClose={onClose} maxWidth="800px">
+      <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between mb-6 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center">
               <Building2 className="w-6 h-6 text-brand-primary" />
@@ -130,37 +132,55 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
         </div>
 
         {/* Info Grid */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-bg-hover rounded-xl p-4">
-            <p className="text-xs text-text-secondary mb-1">Area</p>
-            <p className="text-lg font-semibold text-text-primary">
-              {household.area ? `${household.area} m²` : '-'}
+        <div className="grid grid-cols-4 gap-3 mb-6 shrink-0">
+          <div className="bg-bg-hover rounded-xl p-4 text-center">
+            <p className="text-xs text-text-secondary mb-2">Area</p>
+            <p className="text-xl font-bold text-brand-primary">
+              {household.area ? `${household.area}` : '-'}
             </p>
+            {household.area && <p className="text-xs text-text-secondary">m²</p>}
           </div>
-          <div className="bg-bg-hover rounded-xl p-4">
-            <p className="text-xs text-text-secondary mb-1">Floor</p>
-            <p className="text-lg font-semibold text-text-primary">
+          <div className="bg-bg-hover rounded-xl p-4 text-center">
+            <p className="text-xs text-text-secondary mb-2">Floor</p>
+            <p className="text-xl font-bold text-brand-primary">
               {household.floor || '-'}
             </p>
           </div>
-          <div className="bg-bg-hover rounded-xl p-4">
-            <p className="text-xs text-text-secondary mb-1">Status</p>
-            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${statusColor.bg} ${statusColor.text}`}>
+          <div className="bg-bg-hover rounded-xl p-4 text-center">
+            <p className="text-xs text-text-secondary mb-2">Status</p>
+            <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-semibold ${statusColor.bg} ${statusColor.text}`}>
               {statusColor.label}
             </span>
           </div>
-          <div className="bg-bg-hover rounded-xl p-4">
-            <p className="text-xs text-text-secondary mb-1">Move-in Date</p>
-            <p className="text-lg font-semibold text-text-primary">
-              {household.moveInDate ? format(new Date(household.moveInDate), 'yyyy-MM-dd') : '-'}
+          <div className="bg-bg-hover rounded-xl p-4 text-center">
+            <p className="text-xs text-text-secondary mb-2">Move-in Date</p>
+            <p className="text-base font-bold text-brand-primary">
+              {household.moveInDate ? format(new Date(household.moveInDate), 'MMM d, yyyy') : '-'}
             </p>
           </div>
         </div>
 
+        {/* Contact Info */}
+        <div className="grid grid-cols-2 gap-4 mb-6 shrink-0">
+          <div className="bg-bg-hover rounded-xl p-4">
+            <p className="text-xs text-text-secondary mb-1">Phone</p>
+            <p className="text-sm font-medium text-text-primary">{household.phone || '-'}</p>
+          </div>
+          <div className="bg-bg-hover rounded-xl p-4">
+            <p className="text-xs text-text-secondary mb-1">Email</p>
+            <p className="text-sm font-medium text-text-primary">{household.email || '-'}</p>
+          </div>
+        </div>
+
         {/* Household Members Section */}
-        <div className="border border-border-light rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="font-semibold text-brand-primary text-lg">Household Members</h4>
+        <div className="bg-bg-hover/50 border border-border-light rounded-xl p-5 flex-1 min-h-0 flex flex-col">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <h4 className="font-semibold text-text-primary text-lg">Household Members</h4>
+              <span className="bg-brand-primary text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                {members.length}
+              </span>
+            </div>
             <button
               onClick={() => setShowAddMember(true)}
               className="flex items-center gap-2 bg-brand-primary text-white px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity"
@@ -171,31 +191,33 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
           </div>
 
           {members.length === 0 ? (
-            <p className="text-text-secondary text-center py-8">No members in this household</p>
+            <div className="text-center py-6 h-[180px] flex flex-col items-center justify-center">
+              <div className="w-16 h-16 mb-3 rounded-full bg-bg-hover flex items-center justify-center">
+                <UserMinus className="w-8 h-8 text-text-secondary" />
+              </div>
+              <p className="text-text-secondary">No members in this household</p>
+              <p className="text-sm text-text-secondary mt-1">Add members to track residents</p>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="h-[180px] overflow-y-auto space-y-3 pr-1 scrollbar-hide">
               {members.map(member => (
-                <div key={member.id} className="flex items-center justify-between p-4 bg-bg-hover rounded-xl border-l-4 border-brand-primary">
+                <div key={member.id} className="flex items-center justify-between p-4 bg-bg-white rounded-xl border border-border-light shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-brand-primary/10 flex items-center justify-center">
-                      <span className="text-brand-primary font-medium text-sm">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-primary to-brand-primary/70 flex items-center justify-center shrink-0">
+                      <span className="text-white font-semibold text-lg">
                         {member.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium text-text-primary">{member.name}</p>
-                      <div className="flex gap-6 text-sm text-text-secondary mt-1">
-                        <div>
-                          <span className="text-xs text-text-secondary">ID</span>
-                          <p>{member.id.slice(-4)}</p>
-                        </div>
+                      <p className="font-semibold text-text-primary text-base">{member.name}</p>
+                      <div className="flex gap-6 text-sm mt-1">
                         <div>
                           <span className="text-xs text-text-secondary">Date of Birth</span>
-                          <p>{format(new Date(member.dateOfBirth), 'MMM d, yyyy')}</p>
+                          <p className="text-text-primary font-medium">{format(new Date(member.dateOfBirth), 'MMM d, yyyy')}</p>
                         </div>
                         <div>
                           <span className="text-xs text-text-secondary">CCCD</span>
-                          <p>{member.cccd}</p>
+                          <p className="text-text-primary font-medium">{member.cccd}</p>
                         </div>
                       </div>
                     </div>
@@ -205,7 +227,7 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
                       setMemberToRemove(member);
                       setShowRemoveMemberAlert(true);
                     }}
-                    className="flex items-center gap-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-2 rounded-lg transition-colors border border-red-200 dark:border-red-800"
+                    className="flex items-center gap-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-2 rounded-lg transition-colors border border-red-200 dark:border-red-800 shrink-0"
                   >
                     <UserMinus className="w-4 h-4" />
                     Remove
@@ -316,7 +338,7 @@ interface AddMemberModalProps {
 function AddMemberModal({ isOpen, householdId, householdUnit, onClose, onSuccess }: AddMemberModalProps) {
   const [formData, setFormData] = useState({
     name: '',
-    dateOfBirth: '',
+    dateOfBirth: undefined as Date | undefined,
     cccd: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -341,7 +363,9 @@ function AddMemberModal({ isOpen, householdId, householdUnit, onClose, onSuccess
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          dateOfBirth: formData.dateOfBirth ? format(formData.dateOfBirth, 'yyyy-MM-dd') : '',
+          cccd: formData.cccd,
           householdId
         })
       });
@@ -352,7 +376,7 @@ function AddMemberModal({ isOpen, householdId, householdUnit, onClose, onSuccess
       }
 
       toast.success('Member added successfully');
-      setFormData({ name: '', dateOfBirth: '', cccd: '' });
+      setFormData({ name: '', dateOfBirth: undefined, cccd: '' });
       onClose();
       onSuccess();
     } catch (error) {
@@ -388,15 +412,31 @@ function AddMemberModal({ isOpen, householdId, householdUnit, onClose, onSuccess
 
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">Date of Birth *</label>
-          <input
-            type="date"
-            value={formData.dateOfBirth}
-            onChange={(e) => {
-              setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }));
-              if (errors.dateOfBirth) setErrors(prev => ({ ...prev, dateOfBirth: '' }));
-            }}
-            className={`input-default text-sm ${errors.dateOfBirth ? 'border-red-500' : ''}`}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={`input-default text-sm flex items-center justify-between ${errors.dateOfBirth ? 'border-red-500' : ''}`}
+              >
+                <span className={formData.dateOfBirth ? 'text-text-primary' : 'text-text-secondary'}>
+                  {formData.dateOfBirth ? format(formData.dateOfBirth, 'PPP') : 'Select date of birth'}
+                </span>
+                <CalendarIcon className="size-4 text-text-secondary" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="start">
+              <Calendar
+                mode="single"
+                selected={formData.dateOfBirth}
+                onSelect={(date) => {
+                  setFormData(prev => ({ ...prev, dateOfBirth: date }));
+                  if (errors.dateOfBirth) setErrors(prev => ({ ...prev, dateOfBirth: '' }));
+                }}
+                disabled={(date) => date > new Date()}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
           {errors.dateOfBirth && <p className="mt-1 text-sm text-red-500">{errors.dateOfBirth}</p>}
         </div>
 

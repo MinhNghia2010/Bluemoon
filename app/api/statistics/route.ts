@@ -5,105 +5,76 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    // Get counts
-    const [
-      totalHouseholds,
-      activeHouseholds,
-      totalPayments,
-      pendingPayments,
-      collectedPayments,
-      overduePayments,
-      totalParkingSlots,
-      occupiedParkingSlots,
-      availableParkingSlots,
-      totalUtilityBills,
-      pendingUtilityBills,
-      paidUtilityBills,
-      overdueUtilityBills
-    ] = await Promise.all([
-      prisma.household.count(),
-      prisma.household.count({ where: { status: 'active' } }),
-      prisma.payment.count(),
-      prisma.payment.count({ where: { status: 'pending' } }),
-      prisma.payment.count({ where: { status: 'collected' } }),
-      prisma.payment.count({ where: { status: 'overdue' } }),
-      prisma.parkingSlot.count(),
-      prisma.parkingSlot.count({ where: { status: 'occupied' } }),
-      prisma.parkingSlot.count({ where: { status: 'available' } }),
-      prisma.utilityBill.count(),
-      prisma.utilityBill.count({ where: { status: 'pending' } }),
-      prisma.utilityBill.count({ where: { status: 'paid' } }),
-      prisma.utilityBill.count({ where: { status: 'overdue' } })
-    ])
+    // Get counts sequentially to avoid connection pool exhaustion
+    const totalHouseholds = await prisma.household.count()
+    const activeHouseholds = await prisma.household.count({ where: { status: 'active' } })
+    
+    // Get total residents count
+    const totalResidents = await prisma.householdMember.count()
+    
+    const totalPayments = await prisma.payment.count()
+    const pendingPayments = await prisma.payment.count({ where: { status: 'pending' } })
+    const collectedPayments = await prisma.payment.count({ where: { status: 'collected' } })
+    const overduePayments = await prisma.payment.count({ where: { status: 'overdue' } })
+    
+    const totalParkingSlots = await prisma.parkingSlot.count()
+    const occupiedParkingSlots = await prisma.parkingSlot.count({ where: { status: 'occupied' } })
+    const availableParkingSlots = await prisma.parkingSlot.count({ where: { status: 'available' } })
+    
+    const totalUtilityBills = await prisma.utilityBill.count()
+    const pendingUtilityBills = await prisma.utilityBill.count({ where: { status: 'pending' } })
+    const paidUtilityBills = await prisma.utilityBill.count({ where: { status: 'paid' } })
+    const overdueUtilityBills = await prisma.utilityBill.count({ where: { status: 'overdue' } })
 
     // Get financial summaries for Fee Payments
-    const [
-      paymentsCollected,
-      paymentsPending,
-      paymentsOverdue
-    ] = await Promise.all([
-      prisma.payment.aggregate({
-        where: { status: 'collected' },
-        _sum: { amount: true }
-      }),
-      prisma.payment.aggregate({
-        where: { status: 'pending' },
-        _sum: { amount: true }
-      }),
-      prisma.payment.aggregate({
-        where: { status: 'overdue' },
-        _sum: { amount: true }
-      })
-    ])
+    const paymentsCollected = await prisma.payment.aggregate({
+      where: { status: 'collected' },
+      _sum: { amount: true }
+    })
+    const paymentsPending = await prisma.payment.aggregate({
+      where: { status: 'pending' },
+      _sum: { amount: true }
+    })
+    const paymentsOverdue = await prisma.payment.aggregate({
+      where: { status: 'overdue' },
+      _sum: { amount: true }
+    })
 
     // Get financial summaries for Utility Bills
-    const [
-      utilitiesPaid,
-      utilitiesPending,
-      utilitiesOverdue
-    ] = await Promise.all([
-      prisma.utilityBill.aggregate({
-        where: { status: 'paid' },
-        _sum: { amount: true }
-      }),
-      prisma.utilityBill.aggregate({
-        where: { status: 'pending' },
-        _sum: { amount: true }
-      }),
-      prisma.utilityBill.aggregate({
-        where: { status: 'overdue' },
-        _sum: { amount: true }
-      })
-    ])
+    const utilitiesPaid = await prisma.utilityBill.aggregate({
+      where: { status: 'paid' },
+      _sum: { amount: true }
+    })
+    const utilitiesPending = await prisma.utilityBill.aggregate({
+      where: { status: 'pending' },
+      _sum: { amount: true }
+    })
+    const utilitiesOverdue = await prisma.utilityBill.aggregate({
+      where: { status: 'overdue' },
+      _sum: { amount: true }
+    })
 
     // Get utility bills by type
-    const [
-      electricityTotal,
-      waterTotal,
-      internetTotal,
-      gasTotal
-    ] = await Promise.all([
-      prisma.utilityBill.aggregate({
-        where: { type: 'electricity' },
-        _sum: { amount: true },
-        _count: true
-      }),
-      prisma.utilityBill.aggregate({
-        where: { type: 'water' },
-        _sum: { amount: true },
-        _count: true
-      }),
-      prisma.utilityBill.aggregate({
-        where: { type: 'internet' },
-        _sum: { amount: true },
-        _count: true
-      }),
-      prisma.utilityBill.aggregate({
-        where: { type: 'gas' },
-        _sum: { amount: true },
-        _count: true
-      })
-    ])
+    const electricityTotal = await prisma.utilityBill.aggregate({
+      where: { type: 'electricity' },
+      _sum: { amount: true },
+      _count: true
+    })
+    const waterTotal = await prisma.utilityBill.aggregate({
+      where: { type: 'water' },
+      _sum: { amount: true },
+      _count: true
+    })
+    const internetTotal = await prisma.utilityBill.aggregate({
+      where: { type: 'internet' },
+      _sum: { amount: true },
+      _count: true
+    })
+    const gasTotal = await prisma.utilityBill.aggregate({
+      where: { type: 'gas' },
+      _sum: { amount: true },
+      _count: true
+    })
 
     // Get parking revenue
     const parkingSlots = await prisma.parkingSlot.findMany({
@@ -111,25 +82,19 @@ export async function GET() {
     })
     const monthlyParkingRevenue = parkingSlots.reduce((sum, slot) => sum + slot.monthlyFee, 0)
 
-    // Get parking by type
-    const [
-      carSlots,
-      motorcycleSlots,
-      bicycleSlots
-    ] = await Promise.all([
-      prisma.parkingSlot.aggregate({
-        where: { type: 'car' },
-        _count: true
-      }),
-      prisma.parkingSlot.aggregate({
-        where: { type: 'motorcycle' },
-        _count: true
-      }),
-      prisma.parkingSlot.aggregate({
-        where: { type: 'bicycle' },
-        _count: true
-      })
-    ])
+    // Get parking by type sequentially
+    const carSlots = await prisma.parkingSlot.aggregate({
+      where: { type: 'car' },
+      _count: true
+    })
+    const motorcycleSlots = await prisma.parkingSlot.aggregate({
+      where: { type: 'motorcycle' },
+      _count: true
+    })
+    const bicycleSlots = await prisma.parkingSlot.aggregate({
+      where: { type: 'bicycle' },
+      _count: true
+    })
 
     // Get monthly data for the last 6 months with status breakdown
     const sixMonthsAgo = new Date()
@@ -221,8 +186,8 @@ export async function GET() {
       ? Math.round((paidUtilityPayments / totalUtilityPayments) * 100) 
       : 0
 
-    // Overall totals
-    const totalCollected = (paymentsCollected._sum.amount || 0) + (utilitiesPaid._sum.amount || 0)
+    // Overall totals (including parking revenue)
+    const totalCollected = (paymentsCollected._sum.amount || 0) + (utilitiesPaid._sum.amount || 0) + monthlyParkingRevenue
     const totalPending = (paymentsPending._sum.amount || 0) + (utilitiesPending._sum.amount || 0)
     const totalOverdue = (paymentsOverdue._sum.amount || 0) + (utilitiesOverdue._sum.amount || 0)
 
@@ -230,6 +195,7 @@ export async function GET() {
       overview: {
         totalHouseholds,
         activeHouseholds,
+        totalResidents,
         // Fee Payments
         totalPayments,
         pendingPayments,

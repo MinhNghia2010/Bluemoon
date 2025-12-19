@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { Home, Receipt, Zap, Car, Droplets, Flame, Wifi, Motorbike, Bike } from 'lucide-react';
+import { Home, Receipt, Users, Car, Droplets, Flame, Wifi, Motorbike, Bike, Zap } from 'lucide-react';
 import { PageHeader } from './shared/PageHeader';
 import { SummaryCard } from './shared/SummaryCard';
 import { FilterButtons } from './shared/FilterButtons';
@@ -142,8 +142,8 @@ export function StatisticsView() {
 
         const quickStats = [
           { icon: Home, label: 'Households', value: stats?.overview?.totalHouseholds || 0, subtitle: `${stats?.overview?.activeHouseholds || 0} active`, bgColor: 'bg-purple-100 dark:bg-purple-900/30', iconColor: 'text-purple-600 dark:text-purple-400' },
+          { icon: Users, label: 'Total Residents', value: stats?.overview?.totalResidents || 0, subtitle: 'All members', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30', iconColor: 'text-yellow-600 dark:text-yellow-400' },
           { icon: Receipt, label: 'Fee Payments', value: stats?.overview?.totalPayments || 0, subtitle: `${stats?.overview?.feeCollectionRate || 0}% collected`, bgColor: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600 dark:text-blue-400' },
-          { icon: Zap, label: 'Utility Bills', value: stats?.overview?.totalUtilityBills || 0, subtitle: `${stats?.overview?.utilityCollectionRate || 0}% paid`, bgColor: 'bg-yellow-100 dark:bg-yellow-900/30', iconColor: 'text-yellow-600 dark:text-yellow-400' },
           { icon: Car, label: 'Parking Slots', value: stats?.overview?.totalParkingSlots || 0, subtitle: `${stats?.overview?.occupiedParkingSlots || 0} occupied`, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' }
         ];
 

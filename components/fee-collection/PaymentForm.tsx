@@ -448,7 +448,7 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
                         <CalendarIcon className="size-4 text-text-secondary" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-bg-white" align="start">
+                    <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="start">
                       <Calendar
                         mode="single"
                         selected={formData.dueDate ? new Date(formData.dueDate) : undefined}
@@ -708,7 +708,7 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
                           <CalendarIcon className="size-4 text-text-secondary" />
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 bg-bg-white" align="start">
+                      <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="start">
                         <Calendar
                           mode="single"
                           selected={bulkData.dueDate ? new Date(bulkData.dueDate) : undefined}

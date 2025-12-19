@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { Save } from 'lucide-react';
+import { Save, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface Household {
   id: string;
@@ -29,7 +32,7 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
     ownerName: '',
     area: '',
     floor: '',
-    moveInDate: '',
+    moveInDate: undefined as Date | undefined,
     phone: '',
     email: ''
   });
@@ -43,7 +46,7 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
         ownerName: household.ownerName,
         area: household.area?.toString() || '',
         floor: household.floor?.toString() || '',
-        moveInDate: household.moveInDate ? new Date(household.moveInDate).toISOString().split('T')[0] : '',
+        moveInDate: household.moveInDate ? new Date(household.moveInDate) : undefined,
         phone: household.phone,
         email: household.email
       });
@@ -79,7 +82,7 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
         ...formData,
         area: formData.area ? parseFloat(formData.area) : null,
         floor: formData.floor ? parseInt(formData.floor) : null,
-        moveInDate: formData.moveInDate || null
+        moveInDate: formData.moveInDate ? format(formData.moveInDate, 'yyyy-MM-dd') : null
       });
     }
   };
@@ -173,13 +176,27 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Move-in Date</label>
-              <input
-                type="date"
-                name="moveInDate"
-                value={formData.moveInDate}
-                onChange={handleChange}
-                className="input-default text-sm"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="input-default text-sm flex items-center justify-between"
+                  >
+                    <span className={formData.moveInDate ? 'text-text-primary' : 'text-text-secondary'}>
+                      {formData.moveInDate ? format(formData.moveInDate, 'PPP') : 'Select move-in date'}
+                    </span>
+                    <CalendarIcon className="size-4 text-text-secondary" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.moveInDate}
+                    onSelect={(date) => setFormData(prev => ({ ...prev, moveInDate: date }))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 

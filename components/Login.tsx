@@ -3,12 +3,8 @@
 import { useState, useEffect } from "react";
 import svgPaths from "@/imports/svg-uiac8iywkt";
 import { DarkModeToggle } from "./shared/DarkModeToggle";
-import { authApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
-
-interface LoginProps {
-  onLogin: () => void;
-}
 
 function VuesaxBulkColorfilter() {
   return (
@@ -47,7 +43,8 @@ function VuesaxBulkColorfilter() {
   );
 }
 
-export function Login({ onLogin }: LoginProps) {
+export function Login() {
+  const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -69,14 +66,8 @@ export function Login({ onLogin }: LoginProps) {
     setIsLoading(true);
 
     try {
-      const response = await authApi.login(username, password);
-      
-      // Store token and user in localStorage
-      localStorage.setItem('bluemoon-token', response.token);
-      localStorage.setItem('bluemoon-user', JSON.stringify(response.user));
-      
-      toast.success(`Welcome back, ${response.user.name}!`);
-      onLogin();
+      await login(username, password);
+      toast.success(`Welcome back!`);
     } catch (err: any) {
       setError(err.message || "Invalid username or password");
       toast.error("Login failed");

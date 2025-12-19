@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { AuthProviderWrapper } from '@/components/AuthProviderWrapper'
 
 export const metadata: Metadata = {
   title: 'BlueMoon v2.0 - Apartment Fee Management',
@@ -13,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProviderWrapper>{children}</AuthProviderWrapper>
+      </body>
     </html>
   )
 }

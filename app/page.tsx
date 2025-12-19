@@ -1,35 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useAuth } from '@/lib/auth-context'
 import { Login } from '@/components/Login'
 import { Dashboard } from '@/components/Dashboard'
-import { Toaster } from 'sonner'
 
 export default function HomePage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const { user, isLoading, logout } = useAuth()
 
-  const handleLogin = () => {
-    setIsLoggedIn(true)
-  }
-
-  const handleLogout = () => {
-    setIsLoggedIn(false)
-  }
-
-  if (!isLoggedIn) {
+  // Show loading state while checking auth
+  if (isLoading) {
     return (
-      <>
-        <Login onLogin={handleLogin} />
-        <Toaster position="bottom-right" richColors />
-      </>
+      <div className="flex items-center justify-center min-h-screen bg-bg-page">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
+      </div>
     )
   }
 
-  return (
-    <>
-      <Dashboard onLogout={handleLogout} />
-      <Toaster position="bottom-right" richColors />
-    </>
-  )
+  if (!user) {
+    return <Login />
+  }
+
+  return <Dashboard onLogout={logout} />
 }
 

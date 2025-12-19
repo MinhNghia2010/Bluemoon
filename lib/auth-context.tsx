@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { authApi } from './api'
 
 interface User {
@@ -17,6 +17,7 @@ interface AuthContextType {
   isLoading: boolean
   login: (username: string, password: string) => Promise<void>
   logout: () => void
+  refreshAuth: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -26,17 +27,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    // Check for stored token on mount
+  const refreshAuth = useCallback(() => {
     const storedToken = localStorage.getItem('bluemoon-token')
     const storedUser = localStorage.getItem('bluemoon-user')
     
     if (storedToken && storedUser) {
-      setToken(storedToken)
-      setUser(JSON.parse(storedUser))
+      try {
+        const parsedUser = JSON.parse(storedUser)
+        setToken(storedToken)
+        setUser(parsedUser)
+      } catch (e) {
+        // Invalid stored data, clear it
+        localStorage.removeItem('bluemoon-token')
+        localStorage.removeItem('bluemoon-user')
+        setToken(null)
+        setUser(null)
+      }
+    } else {
+      setToken(null)
+      setUser(null)
     }
     setIsLoading(false)
   }, [])
+
+  useEffect(() => {
+    // Check for stored token on mount
+    refreshAuth()
+
+    // Listen for storage changes (for multi-tab support)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'bluemoon-token' || e.key === 'bluemoon-user') {
+        refreshAuth()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [refreshAuth])
 
   const login = async (username: string, password: string) => {
     const response = await authApi.login(username, password)
@@ -56,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, logout, refreshAuth }}>
       {children}
     </AuthContext.Provider>
   )

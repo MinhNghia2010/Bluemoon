@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Trash2, Users, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Users, AlertTriangle, CalendarIcon, ChevronDown } from 'lucide-react'
 import { format } from 'date-fns'
 import {
   AlertDialog,
@@ -13,6 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from 'sonner'
 
 interface HouseholdMember {
@@ -161,14 +163,14 @@ export function DemographyView() {
 
       {/* Search */}
       <div className="bg-bg-white rounded-2xl p-6 shadow-lg border border-border-light mb-6">
-        <div className="relative">
+        <div className="relative input-default">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
           <input
             type="text"
             placeholder="Search by ID, name, date of birth, room, or CCCD..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input-default pl-12 text-sm"
+            className=" pl-8 text-sm w-100 border-0 outline-none bg-transparent caret-brand-primary placeholder:text-text-secondary"
           />
         </div>
       </div>
@@ -300,6 +302,8 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
     cccd: '',
     householdId: ''
   })
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -342,6 +346,8 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
     }
   }
 
+  const selectedHousehold = households.find(h => h.id === formData.householdId)
+
   return (
     <div>
       {/* Header */}
@@ -375,15 +381,37 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Date of Birth *</label>
-              <input
-                type="date"
-                value={formData.dateOfBirth}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))
-                  if (errors.dateOfBirth) setErrors(prev => ({ ...prev, dateOfBirth: '' }))
-                }}
-                className={`input-default text-sm ${errors.dateOfBirth ? 'border-red-500' : ''}`}
-              />
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={`input-default text-sm flex items-center justify-between w-full ${errors.dateOfBirth ? 'border-red-500' : ''}`}
+                  >
+                    <span className={formData.dateOfBirth ? 'text-text-primary' : 'text-text-secondary'}>
+                      {formData.dateOfBirth 
+                        ? format(new Date(formData.dateOfBirth), 'MMMM d, yyyy')
+                        : 'Select date of birth'
+                      }
+                    </span>
+                    <CalendarIcon className="w-4 h-4 text-text-secondary" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.dateOfBirth ? new Date(formData.dateOfBirth) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setFormData(prev => ({ ...prev, dateOfBirth: format(date, 'yyyy-MM-dd') }))
+                        if (errors.dateOfBirth) setErrors(prev => ({ ...prev, dateOfBirth: '' }))
+                      }
+                      setDatePickerOpen(false)
+                    }}
+                    disabled={(date) => date > new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
               {errors.dateOfBirth && <p className="mt-1 text-sm text-red-500">{errors.dateOfBirth}</p>}
             </div>
 
@@ -405,18 +433,50 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Household ID (Room)</label>
-              <select
-                value={formData.householdId}
-                onChange={(e) => setFormData(prev => ({ ...prev, householdId: e.target.value }))}
-                className="input-default text-sm"
-              >
-                <option value="">Not assigned</option>
-                {households.map(h => (
-                  <option key={h.id} value={h.id}>
-                    {h.unit} - {h.ownerName}
-                  </option>
-                ))}
-              </select>
+              <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="input-default text-sm flex items-center justify-between w-full"
+                  >
+                    <span className={selectedHousehold ? 'text-text-primary' : 'text-text-secondary'}>
+                      {selectedHousehold 
+                        ? `${selectedHousehold.unit} - ${selectedHousehold.ownerName}`
+                        : 'Not assigned'
+                      }
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-text-secondary" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-bg-white border-border-light" align="start">
+                  <div className="max-h-[250px] overflow-y-auto scrollbar-hide">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, householdId: '' }))
+                        setDropdownOpen(false)
+                      }}
+                      className={`w-full px-4 py-3 text-left text-sm hover:bg-bg-hover transition-colors border-b border-border-light ${!formData.householdId ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-secondary'}`}
+                    >
+                      Not assigned
+                    </button>
+                    {households.map(h => (
+                      <button
+                        key={h.id}
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, householdId: h.id }))
+                          setDropdownOpen(false)
+                        }}
+                        className={`w-full px-4 py-3 text-left text-sm hover:bg-bg-hover transition-colors border-b border-border-light last:border-b-0 ${formData.householdId === h.id ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'}`}
+                      >
+                        <span className="font-medium">{h.unit}</span>
+                        <span className="text-text-secondary ml-2">- {h.ownerName}</span>
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
               <p className="mt-1 text-xs text-text-secondary">Leave empty if not assigned to a household</p>
             </div>
           </div>
