@@ -1,8 +1,8 @@
 'use client'
 
-import { BarChart3, Car, ClipboardList, Settings, Tags, Users, Zap } from 'lucide-react';
+import { BarChart3, Car, ClipboardList, Settings, Tags, Users, Zap, UserCheck } from 'lucide-react';
 
-type View = 'households' | 'feeCategories' | 'feeCollection' | 'statistics' | 'parking' | 'utilities' | 'settings';
+type View = 'households' | 'demography' | 'feeCategories' | 'feeCollection' | 'statistics' | 'parking' | 'utilities' | 'settings';
 
 interface SidebarProps {
   currentView: View;
@@ -23,6 +23,7 @@ export function Sidebar({ currentView, onViewChange, isCollapsed, onToggle }: Si
   const menuItems = [
     { id: 'statistics' as View, label: 'Statistics', Icon: BarChart3 },
     { id: 'households' as View, label: 'Households', Icon: Users },
+    { id: 'demography' as View, label: 'Demography', Icon: UserCheck },
     { id: 'feeCategories' as View, label: 'Fee Categories', Icon: Tags },
     { id: 'feeCollection' as View, label: 'Fee Collection', Icon: ClipboardList },
     { id: 'parking' as View, label: 'Parking', Icon: Car },

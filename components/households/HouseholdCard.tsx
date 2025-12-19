@@ -1,9 +1,13 @@
+import { Building2 } from 'lucide-react';
+
 interface Household {
   id: string;
   unit: string;
   ownerName: string;
   residents: number;
-  status: 'paid' | 'pending' | 'overdue';
+  area?: number | null;
+  floor?: number | null;
+  status: 'paid' | 'pending' | 'overdue' | 'active' | 'inactive';
   balance: number;
   phone: string;
   email: string;
@@ -18,49 +22,39 @@ interface HouseholdCardProps {
 export function HouseholdCard({ household, onClick, getStatusColor }: HouseholdCardProps) {
   const statusColor = getStatusColor(household.status);
 
+  // Determine display status
+  const displayStatus = household.status === 'active' || household.status === 'paid' || household.status === 'pending' || household.status === 'overdue' 
+    ? 'Occupied' 
+    : 'Vacant';
+
   return (
     <div 
       onClick={onClick}
-      className="bg-bg-white rounded-[16px] p-[20px] cursor-pointer hover:shadow-lg transition-shadow border border-border-light"
+      className="bg-bg-white rounded-2xl p-5 cursor-pointer hover:shadow-lg transition-shadow border border-border-light border-l-4 border-l-brand-primary"
     >
-      <div className="flex items-start justify-between mb-[16px]">
-        <div className="flex items-center gap-[12px]">
-          <div className="bg-[#5030e5] rounded-full size-[48px] flex items-center justify-center">
-            <span className="text-white font-semibold text-lg">{household.unit[0]}</span>
-          </div>
-          <div>
-            <p className="font-semibold text-text-primary text-base">{household.unit}</p>
-            <p className="text-text-secondary text-sm">{household.ownerName}</p>
-          </div>
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center flex-shrink-0">
+          <Building2 className="w-6 h-6 text-brand-primary" />
         </div>
-        <div className={`${statusColor.bg} px-[12px] py-[4px] rounded-[4px]`}>
-          <p className={`font-medium text-xs ${statusColor.text}`}>
-            {household.status}
-          </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <p className="font-semibold text-text-primary text-lg">Room {household.unit}</p>
+          </div>
+          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusColor.bg} ${statusColor.text}`}>
+            {displayStatus}
+          </span>
         </div>
       </div>
 
-      <div className="space-y-[8px] mb-[16px]">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-text-secondary text-xs">Residents</p>
-          <p className="font-medium text-text-primary text-xs">{household.residents} people</p>
+          <p className="text-text-secondary text-sm">Owner:</p>
+          <p className="font-medium text-text-primary text-sm text-right truncate max-w-[150px]">{household.ownerName}</p>
         </div>
         <div className="flex items-center justify-between">
-          <p className="text-text-secondary text-xs">Phone</p>
-          <p className="font-medium text-text-primary text-xs">{household.phone}</p>
+          <p className="text-text-secondary text-sm">Members:</p>
+          <p className="font-medium text-text-primary text-sm">{household.residents} {household.residents === 1 ? 'person' : 'people'}</p>
         </div>
-        <div className="flex items-center justify-between">
-          <p className="text-text-secondary text-xs">Balance</p>
-          <p className={`font-medium text-xs ${household.balance > 0 ? 'text-[#D34B5E]' : 'text-[#7AC555]'}`}>
-            ${household.balance.toLocaleString()}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-[8px]">
-        <img alt="" className="block size-[24px] rounded-full" src="/images/68ebe80fab5d1aee1888ff091f8c21c55b7adb2b.png" />
-        <img alt="" className="block size-[24px] rounded-full" src="/images/61ee1b938078bdee53664108367ad387382ae647.png" />
-        <img alt="" className="block size-[24px] rounded-full" src="/images/bbacbe45760530f87ab791097144e6fe9bbe34f5.png" />
       </div>
     </div>
   );

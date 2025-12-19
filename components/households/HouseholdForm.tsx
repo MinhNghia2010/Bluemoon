@@ -8,6 +8,9 @@ interface Household {
   unit: string;
   ownerName: string;
   residents: number;
+  area?: number | null;
+  floor?: number | null;
+  moveInDate?: string | null;
   status: 'paid' | 'pending' | 'overdue';
   balance: number;
   phone: string;
@@ -24,7 +27,9 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
   const [formData, setFormData] = useState({
     unit: '',
     ownerName: '',
-    residents: 1,
+    area: '',
+    floor: '',
+    moveInDate: '',
     phone: '',
     email: ''
   });
@@ -36,7 +41,9 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
       setFormData({
         unit: household.unit,
         ownerName: household.ownerName,
-        residents: household.residents,
+        area: household.area?.toString() || '',
+        floor: household.floor?.toString() || '',
+        moveInDate: household.moveInDate ? new Date(household.moveInDate).toISOString().split('T')[0] : '',
         phone: household.phone,
         email: household.email
       });
@@ -51,9 +58,6 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
     }
     if (!formData.ownerName.trim()) {
       newErrors.ownerName = 'Owner name is required';
-    }
-    if (formData.residents < 1) {
-      newErrors.residents = 'At least 1 resident is required';
     }
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
@@ -71,15 +75,20 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSave(formData);
+      onSave({
+        ...formData,
+        area: formData.area ? parseFloat(formData.area) : null,
+        floor: formData.floor ? parseInt(formData.floor) : null,
+        moveInDate: formData.moveInDate || null
+      });
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseInt(value) || 0 : value
+      [name]: value
     }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -112,7 +121,7 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
                 name="unit"
                 value={formData.unit}
                 onChange={handleChange}
-                placeholder="e.g., A-101"
+                placeholder="e.g., 101"
                 className={`input-default text-sm ${errors.unit ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
               />
               {errors.unit && (
@@ -135,19 +144,42 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
               )}
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">Area (m²)</label>
+                <input
+                  type="number"
+                  name="area"
+                  value={formData.area}
+                  onChange={handleChange}
+                  placeholder="e.g., 70"
+                  className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-2">Floor</label>
+                <input
+                  type="number"
+                  name="floor"
+                  value={formData.floor}
+                  onChange={handleChange}
+                  placeholder="e.g., 1"
+                  min="1"
+                  className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">Number of Residents *</label>
+              <label className="block text-sm font-medium text-text-primary mb-2">Move-in Date</label>
               <input
-                type="number"
-                name="residents"
-                value={formData.residents}
+                type="date"
+                name="moveInDate"
+                value={formData.moveInDate}
                 onChange={handleChange}
-                min="1"
-                className={`input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${errors.residents ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                className="input-default text-sm"
               />
-              {errors.residents && (
-                <p className="mt-0.5 text-sm text-red-500">{errors.residents}</p>
-              )}
             </div>
           </div>
 

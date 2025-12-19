@@ -14,6 +14,9 @@ interface Household {
   unit: string;
   ownerName: string;
   residents: number;
+  area?: number | null;
+  floor?: number | null;
+  moveInDate?: string | null;
   status: 'paid' | 'pending' | 'overdue';
   balance: number;
   phone: string;
@@ -196,6 +199,7 @@ export function HouseholdsView() {
             onClose={handleCloseModal}
             onEdit={handleEditFromModal}
             onDelete={() => selectedHousehold && handleDelete(selectedHousehold.id)}
+            onMembersChange={fetchHouseholds}
           />
         </>
       )}

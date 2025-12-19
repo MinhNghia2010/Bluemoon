@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { HouseholdsView } from './HouseholdsView';
+import { DemographyView } from './DemographyView';
 import { FeeCategoriesView } from './FeeCategoriesView';
 import { FeeCollectionView } from './FeeCollectionView';
 import { StatisticsView } from './StatisticsView';
@@ -11,7 +12,7 @@ import { ParkingView } from './ParkingView';
 import { UtilitiesView } from './UtilitiesView';
 import { SettingsView } from './SettingsView';
 
-type View = 'households' | 'feeCategories' | 'feeCollection' | 'statistics' | 'parking' | 'utilities' | 'settings';
+type View = 'households' | 'demography' | 'feeCategories' | 'feeCollection' | 'statistics' | 'parking' | 'utilities' | 'settings';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -45,6 +46,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
         
         <div className="p-[40px]">
           {currentView === 'households' && <HouseholdsView />}
+          {currentView === 'demography' && <DemographyView />}
           {currentView === 'feeCategories' && <FeeCategoriesView />}
           {currentView === 'feeCollection' && <FeeCollectionView />}
           {currentView === 'statistics' && <StatisticsView />}
