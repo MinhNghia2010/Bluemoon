@@ -186,51 +186,41 @@ export function CategoryForm({ category, onSave, onCancel }: CategoryFormProps) 
       </div>
 
       {/* Form */}
-      <div className="card max-w-[800px] border border-neutral-200">
-        <div className="space-y-6">
-          {/* Category Name */}
-          <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-            <label className="text-sm font-medium text-text-primary pt-3">
-              Category Name
-            </label>
-            <div>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="e.g., Maintenance Fee"
-                className="input-default text-sm"
-              />
-              {errors.name && <p className="text-xs text-error mt-1">{errors.name}</p>}
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {/* Basics */}
+        <div className="bg-bg-white rounded-[16px] p-8 shadow-lg border border-border-light space-y-5">
+          <h3 className="font-semibold text-text-primary text-lg">Category Details</h3>
+
+          <div>
+            <label className="text-sm font-medium text-text-primary mb-2 block">Category Name</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="e.g., Maintenance Fee"
+              className="input-default text-sm"
+            />
+            {errors.name && <p className="text-xs text-error mt-0.5">{errors.name}</p>}
           </div>
 
-          {/* Amount */}
-          <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-            <label className="text-sm font-medium text-text-primary pt-3">
-              Amount ($)
-            </label>
-            <div>
-              <input
-                type="number"
-                value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
-                onKeyDown={handleKeyDown}
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-              />
-              {errors.amount && <p className="text-xs text-error mt-1">{errors.amount}</p>}
-            </div>
+          <div>
+            <label className="text-sm font-medium text-text-primary mb-2 block">Amount ($)</label>
+            <input
+              type="number"
+              value={formData.amount}
+              onChange={(e) => handleInputChange('amount', e.target.value)}
+              onKeyDown={handleKeyDown}
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            {errors.amount && <p className="text-xs text-error mt-0.5">{errors.amount}</p>}
           </div>
 
-          {/* Frequency */}
-          <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-            <label className="text-sm font-medium text-text-primary">
-              Frequency
-            </label>
+          <div>
+            <label className="text-sm font-medium text-text-primary mb-2 block">Frequency</label>
             <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
@@ -242,57 +232,42 @@ export function CategoryForm({ category, onSave, onCancel }: CategoryFormProps) 
               </button>
               {isFrequencyOpen && (
                 <div className="absolute z-10 bg-bg-white border border-border-default rounded-sm shadow-lg w-full mt-1 overflow-hidden">
-                  <div
-                    className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
-                    onClick={() => handleFrequencySelect('monthly')}
-                  >
+                  <div className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors" onClick={() => handleFrequencySelect('monthly')}>
                     Monthly
                   </div>
-                  <div
-                    className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
-                    onClick={() => handleFrequencySelect('quarterly')}
-                  >
+                  <div className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors" onClick={() => handleFrequencySelect('quarterly')}>
                     Quarterly
                   </div>
-                  <div
-                    className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
-                    onClick={() => handleFrequencySelect('annual')}
-                  >
+                  <div className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors" onClick={() => handleFrequencySelect('annual')}>
                     Annual
                   </div>
-                  <div
-                    className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
-                    onClick={() => handleFrequencySelect('one-time')}
-                  >
+                  <div className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors" onClick={() => handleFrequencySelect('one-time')}>
                     One-time
                   </div>
                 </div>
               )}
             </div>
           </div>
+        </div>
 
-          {/* Description */}
-          <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-            <label className="text-sm font-medium text-text-primary pt-3">
-              Description
-            </label>
-            <div>
-              <textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="Enter a detailed description"
-                rows={4}
-                className="input-default text-sm resize-none"
-              />
-              {errors.description && <p className="text-xs text-error mt-1">{errors.description}</p>}
-            </div>
+        {/* Description / Status */}
+        <div className="bg-bg-white rounded-[16px] p-8 shadow-lg border border-border-light space-y-5">
+          <h3 className="font-semibold text-text-primary text-lg">Additional Info</h3>
+
+          <div>
+            <label className="text-sm font-medium text-text-primary mb-2 block">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder="Enter a detailed description"
+              rows={5}
+              className="input-default text-sm resize-none"
+            />
+            {errors.description && <p className="text-xs text-error mt-0.5">{errors.description}</p>}
           </div>
 
-          {/* Active Status */}
-          <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-            <label className="text-sm font-medium text-text-primary">
-              Status
-            </label>
+          <div>
+            <label className="text-sm font-medium text-text-primary mb-2 block">Status</label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -304,25 +279,25 @@ export function CategoryForm({ category, onSave, onCancel }: CategoryFormProps) 
             </label>
           </div>
         </div>
+      </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 mt-8">
-          <button
-            onClick={handleSubmit}
-            className="btn-primary flex items-center gap-2"
-          >
-            <div className="relative size-5">
-              <AddSquareIcon className="relative size-5" />
-            </div>
-            {isEditMode ? 'Update Category' : 'Add Category'}
-          </button>
-          <button
-            onClick={onCancel}
-            className="btn-secondary"
-          >
-            Cancel
-          </button>
-        </div>
+      {/* Action Buttons */}
+      <div className="flex gap-3">
+        <button
+          onClick={handleSubmit}
+          className="btn-primary flex items-center gap-2"
+        >
+          <div className="relative size-5">
+            <AddSquareIcon className="relative size-5" />
+          </div>
+          {isEditMode ? 'Update Category' : 'Add Category'}
+        </button>
+        <button
+          onClick={onCancel}
+          className="btn-secondary"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );

@@ -13,9 +13,10 @@ interface CategoryDetailModalProps {
   category: FeeCategory | null;
   onClose: () => void;
   onEdit: () => void;
+  onDelete?: () => void;
 }
 
-export function CategoryDetailModal({ category, onClose, onEdit }: CategoryDetailModalProps) {
+export function CategoryDetailModal({ category, onClose, onEdit, onDelete }: CategoryDetailModalProps) {
   if (!category) return null;
 
   const getFrequencyColor = (frequency: string) => {
@@ -32,7 +33,7 @@ export function CategoryDetailModal({ category, onClose, onEdit }: CategoryDetai
 
   return (
     <Modal isOpen={!!category} onClose={onClose}>
-      <div className="flex items-start justify-between mb-[24px]">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h3 className="font-semibold text-text-primary text-2xl">{category.name}</h3>
           <p className="text-text-secondary text-base">Fee Category Details</p>
@@ -47,26 +48,26 @@ export function CategoryDetailModal({ category, onClose, onEdit }: CategoryDetai
         </button>
       </div>
 
-      <div className="space-y-[16px]">
+      <div className="space-y-4">
         <div>
-          <p className="font-medium text-text-secondary text-xs mb-[4px]">Amount</p>
+          <p className="font-medium text-text-secondary text-xs mb-1">Amount</p>
           <p className="font-semibold text-text-primary text-2xl">${category.amount.toLocaleString()}</p>
         </div>
         <div>
-          <p className="font-medium text-text-secondary text-xs mb-[4px]">Frequency</p>
-          <div className={`${frequencyColor.bg} inline-block px-[12px] py-[6px] rounded-[4px]`}>
+          <p className="font-medium text-text-secondary text-xs mb-1">Frequency</p>
+          <div className={`${frequencyColor.bg} inline-block px-3 py-1.5 rounded-sm`}>
             <p className={`font-medium text-sm ${frequencyColor.text} capitalize`}>
               {category.frequency}
             </p>
           </div>
         </div>
         <div>
-          <p className="font-medium text-text-secondary text-xs mb-[4px]">Description</p>
+          <p className="font-medium text-text-secondary text-xs mb-1">Description</p>
           <p className="text-text-primary text-base">{category.description}</p>
         </div>
         <div>
-          <p className="font-medium text-text-secondary text-xs mb-[4px]">Status</p>
-          <div className={`${category.active ? 'bg-[rgba(122,197,85,0.2)]' : 'bg-neutral-100'} inline-block px-[12px] py-[6px] rounded-[4px]`}>
+          <p className="font-medium text-text-secondary text-xs mb-1">Status</p>
+          <div className={`${category.active ? 'bg-[rgba(122,197,85,0.2)]' : 'bg-neutral-100'} inline-block px-3 py-1.5 rounded-sm`}>
             <p className={`font-medium text-sm ${category.active ? 'text-[#7AC555]' : 'text-text-secondary'}`}>
               {category.active ? 'Active' : 'Inactive'}
             </p>
@@ -81,7 +82,10 @@ export function CategoryDetailModal({ category, onClose, onEdit }: CategoryDetai
         >
           Edit Category
         </button>
-        <button className="flex-1 border border-[#D34B5E] text-[#D34B5E] px-[20px] py-[12px] rounded-[6px] font-medium text-sm hover:bg-[rgba(211,75,94,0.1)] transition-colors">
+        <button 
+          onClick={onDelete}
+          className="flex-1 border border-[#D34B5E] text-[#D34B5E] px-[20px] py-[12px] rounded-[6px] font-medium text-sm hover:bg-[rgba(211,75,94,0.1)] transition-colors"
+        >
           Deactivate
         </button>
       </div>

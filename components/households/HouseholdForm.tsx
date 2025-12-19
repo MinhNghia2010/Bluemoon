@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 
 interface Household {
   id: string;
@@ -81,151 +81,127 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
       ...prev,
       [name]: type === 'number' ? parseInt(value) || 0 : value
     }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <button
-          onClick={onCancel}
-          className="p-2 rounded-lg hover:bg-bg-hover transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5 text-text-secondary" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">
-            {household ? 'Edit Household' : 'Add Household'}
-          </h1>
-          <p className="text-sm text-text-secondary">
-            {household ? 'Update household information' : 'Register a new household'}
-          </p>
-        </div>
+      <div className="mb-10">
+        <h1 className="text-3xl font-semibold text-text-primary mb-2">
+          {household ? 'Edit Household' : 'Add New Household'}
+        </h1>
+        <p className="text-base text-text-secondary">
+          {household ? 'Update household information' : 'Register a new household'}
+        </p>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-bg-white rounded-2xl p-6 shadow-lg border border-border-light">
-        <div className="space-y-6">
-          {/* Unit Number */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Unit Number *
-            </label>
-            <input
-              type="text"
-              name="unit"
-              value={formData.unit}
-              onChange={handleChange}
-              placeholder="e.g., A-101"
-              className={`w-full px-4 py-3 rounded-lg border ${
-                errors.unit ? 'border-red-500' : 'border-border-light'
-              } bg-bg-white text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent`}
-            />
-            {errors.unit && (
-              <p className="mt-1 text-sm text-red-500">{errors.unit}</p>
-            )}
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Household Details */}
+          <div className="bg-bg-white rounded-[16px] p-8 shadow-lg border border-border-light space-y-5">
+            <h3 className="font-semibold text-text-primary text-lg">Household Details</h3>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">Unit Number *</label>
+              <input
+                type="text"
+                name="unit"
+                value={formData.unit}
+                onChange={handleChange}
+                placeholder="e.g., A-101"
+                className={`input-default text-sm ${errors.unit ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              />
+              {errors.unit && (
+                <p className="mt-0.5 text-sm text-red-500">{errors.unit}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">Owner Name *</label>
+              <input
+                type="text"
+                name="ownerName"
+                value={formData.ownerName}
+                onChange={handleChange}
+                placeholder="Full name"
+                className={`input-default text-sm ${errors.ownerName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              />
+              {errors.ownerName && (
+                <p className="mt-0.5 text-sm text-red-500">{errors.ownerName}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">Number of Residents *</label>
+              <input
+                type="number"
+                name="residents"
+                value={formData.residents}
+                onChange={handleChange}
+                min="1"
+                className={`input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${errors.residents ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              />
+              {errors.residents && (
+                <p className="mt-0.5 text-sm text-red-500">{errors.residents}</p>
+              )}
+            </div>
           </div>
 
-          {/* Owner Name */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Owner Name *
-            </label>
-            <input
-              type="text"
-              name="ownerName"
-              value={formData.ownerName}
-              onChange={handleChange}
-              placeholder="Full name"
-              className={`w-full px-4 py-3 rounded-lg border ${
-                errors.ownerName ? 'border-red-500' : 'border-border-light'
-              } bg-bg-white text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent`}
-            />
-            {errors.ownerName && (
-              <p className="mt-1 text-sm text-red-500">{errors.ownerName}</p>
-            )}
-          </div>
+          {/* Contact */}
+          <div className="bg-bg-white rounded-[16px] p-8 shadow-lg border border-border-light space-y-5">
+            <h3 className="font-semibold text-text-primary text-lg">Contact</h3>
 
-          {/* Number of Residents */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Number of Residents *
-            </label>
-            <input
-              type="number"
-              name="residents"
-              value={formData.residents}
-              onChange={handleChange}
-              min="1"
-              className={`w-full px-4 py-3 rounded-lg border ${
-                errors.residents ? 'border-red-500' : 'border-border-light'
-              } bg-bg-white text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent`}
-            />
-            {errors.residents && (
-              <p className="mt-1 text-sm text-red-500">{errors.residents}</p>
-            )}
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">Phone Number *</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="e.g., 123-456-7890"
+                className={`input-default text-sm ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              />
+              {errors.phone && (
+                <p className="mt-0.5 text-sm text-red-500">{errors.phone}</p>
+              )}
+            </div>
 
-          {/* Phone */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Phone Number *
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="e.g., 123-456-7890"
-              className={`w-full px-4 py-3 rounded-lg border ${
-                errors.phone ? 'border-red-500' : 'border-border-light'
-              } bg-bg-white text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent`}
-            />
-            {errors.phone && (
-              <p className="mt-1 text-sm text-red-500">{errors.phone}</p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
-              Email Address *
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="e.g., john@example.com"
-              className={`w-full px-4 py-3 rounded-lg border ${
-                errors.email ? 'border-red-500' : 'border-border-light'
-              } bg-bg-white text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent`}
-            />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-500">{errors.email}</p>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">Email Address *</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="e.g., john@example.com"
+                className={`input-default text-sm ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              />
+              {errors.email && (
+                <p className="mt-0.5 text-sm text-red-500">{errors.email}</p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-border-light">
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            className="btn-primary flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            {household ? 'Update Household' : 'Add Household'}
+          </button>
           <button
             type="button"
             onClick={onCancel}
-            className="px-6 py-2.5 rounded-lg border border-border-light text-text-secondary hover:bg-bg-hover transition-colors"
+            className="btn-secondary"
           >
             Cancel
-          </button>
-          <button
-            type="submit"
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-brand-primary text-white hover:bg-brand-secondary transition-colors"
-          >
-            <Save className="w-4 h-4" />
-            {household ? 'Update' : 'Save'}
           </button>
         </div>
       </form>

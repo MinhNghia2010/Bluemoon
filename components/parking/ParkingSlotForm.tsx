@@ -27,6 +27,8 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
   const [isVehicleTypeOpen, setIsVehicleTypeOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const vehicleTypeRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +49,8 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     onSave({
       ...formData,
       monthlyFee: parseFloat(formData.monthlyFee),
@@ -61,6 +65,9 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   const vehicleTypes = [
@@ -91,6 +98,23 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
 
   const VehicleIcon = vehicleTypes.find(t => t.value === formData.vehicleType)?.icon || Car;
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.slotNumber.trim()) newErrors.slotNumber = 'Slot number is required';
+    if (!formData.unit.trim()) newErrors.unit = 'Apartment unit is required';
+    if (!formData.ownerName.trim()) newErrors.ownerName = 'Owner name is required';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+
+    const fee = parseFloat(formData.monthlyFee);
+    if (!formData.monthlyFee || isNaN(fee) || fee <= 0) {
+      newErrors.monthlyFee = 'Monthly fee must be greater than 0';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   return (
     <div>
       {/* Header */}
@@ -104,74 +128,71 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit}>
-        <div className="card max-w-[800px] border border-neutral-200">
-          <div className="space-y-6">
-            {/* Slot Number */}
-            <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-              <label className="text-sm font-medium text-text-primary pt-3">
-                Slot Number *
-              </label>
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Apartment / Owner Column */}
+          <div className="bg-bg-white rounded-[16px] p-8 shadow-lg border border-border-light space-y-5">
+            <h3 className="font-semibold text-text-primary text-lg">Apartment & Owner</h3>
+
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Slot Number *</label>
               <input
                 type="text"
                 value={formData.slotNumber}
                 onChange={(e) => handleChange('slotNumber', e.target.value)}
-                className="input-default text-sm"
+                className={`input-default text-sm ${errors.slotNumber ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="e.g., P-A01"
                 required
               />
+              {errors.slotNumber && <p className="text-xs text-red-500 mt-0.5">{errors.slotNumber}</p>}
             </div>
 
-            {/* Apartment Unit */}
-            <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-              <label className="text-sm font-medium text-text-primary pt-3">
-                Apartment Unit *
-              </label>
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Apartment Unit *</label>
               <input
                 type="text"
                 value={formData.unit}
                 onChange={(e) => handleChange('unit', e.target.value)}
-                className="input-default text-sm"
+                className={`input-default text-sm ${errors.unit ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="e.g., A-101"
                 required
               />
+              {errors.unit && <p className="text-xs text-red-500 mt-0.5">{errors.unit}</p>}
             </div>
 
-            {/* Owner Name */}
-            <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-              <label className="text-sm font-medium text-text-primary pt-3">
-                Owner Name *
-              </label>
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Owner Name *</label>
               <input
                 type="text"
                 value={formData.ownerName}
                 onChange={(e) => handleChange('ownerName', e.target.value)}
-                className="input-default text-sm"
+                className={`input-default text-sm ${errors.ownerName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="Enter owner name"
                 required
               />
+              {errors.ownerName && <p className="text-xs text-red-500 mt-0.5">{errors.ownerName}</p>}
             </div>
 
-            {/* Phone Number */}
-            <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-              <label className="text-sm font-medium text-text-primary pt-3">
-                Phone Number *
-                </label>
-                <input
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Phone Number *</label>
+              <input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleChange('phone', e.target.value)}
-                className="input-default text-sm"
+                className={`input-default text-sm ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="e.g., 555-0101"
                 required
-                />
-              </div>
+              />
+              {errors.phone && <p className="text-xs text-red-500 mt-0.5">{errors.phone}</p>}
+            </div>
+          </div>
 
-            {/* Vehicle Type */}
-            <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-              <label className="text-sm font-medium text-text-primary">
-                Vehicle Type *
-              </label>
+          {/* Vehicle Column */}
+          <div className="bg-bg-white rounded-[16px] p-8 shadow-lg border border-border-light space-y-5">
+            <h3 className="font-semibold text-text-primary text-lg">Vehicle Details</h3>
+
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Vehicle Type *</label>
               <div className="relative" ref={vehicleTypeRef}>
                 <button
                   type="button"
@@ -209,11 +230,8 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
               </div>
             </div>
 
-            {/* License Plate */}
-            <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-              <label className="text-sm font-medium text-text-primary pt-3">
-                License Plate
-              </label>
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">License Plate</label>
               <input
                 type="text"
                 value={formData.licensePlate}
@@ -223,28 +241,23 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
               />
             </div>
 
-            {/* Monthly Fee */}
-            <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-              <label className="text-sm font-medium text-text-primary pt-3">
-                Monthly Fee ($) *
-              </label>
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Monthly Fee ($) *</label>
               <input
                 type="number"
                 value={formData.monthlyFee}
                 onChange={(e) => handleChange('monthlyFee', e.target.value)}
-                className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className={`input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${errors.monthlyFee ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                 placeholder="e.g., 50"
                 min="0"
                 step="0.01"
                 required
               />
+              {errors.monthlyFee && <p className="text-xs text-red-500 mt-0.5">{errors.monthlyFee}</p>}
             </div>
 
-            {/* Status */}
-            <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-              <label className="text-sm font-medium text-text-primary">
-                Status *
-              </label>
+            <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Status *</label>
               <div className="relative" ref={statusRef}>
                 <button
                   type="button"
@@ -276,29 +289,29 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
                     ))}
                   </div>
                 )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
-          <div className="flex gap-3 mt-8">
-            <button
-              type="submit"
-              className="btn-primary flex items-center gap-2"
-            >
-              <div className="relative size-5">
-                <AddSquareIcon className="relative size-5" />
-              </div>
-              {slot ? 'Update Slot' : 'Add Slot'}
-            </button>
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            className="btn-primary flex items-center gap-2"
+          >
+            <div className="relative size-5">
+              <AddSquareIcon className="relative size-5" />
+            </div>
+            {slot ? 'Update Slot' : 'Add Slot'}
+          </button>
           <button
             type="button"
             onClick={onCancel}
-              className="btn-secondary"
+            className="btn-secondary"
           >
             Cancel
           </button>
-          </div>
         </div>
       </form>
     </div>

@@ -233,15 +233,21 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
   const updateFeeItem = (id: string, field: 'feeCategoryId' | 'amount', value: string | number) => {
     setBulkData(prev => ({
       ...prev,
-      fees: prev.fees.map(f => {
-        if (f.id === id) {
-          if (field === 'feeCategoryId') {
-            const category = categories.find(c => c.id === value);
-            return { ...f, feeCategoryId: value as string, amount: category?.amount || 0 };
-          }
-          return { ...f, [field]: value };
+      fees: prev.fees.map(fee => {
+        if (fee.id !== id) return fee;
+
+        if (field === 'feeCategoryId') {
+          const categoryId = value as string;
+          const category = categories.find(c => c.id === categoryId);
+          return {
+            ...fee,
+            feeCategoryId: categoryId,
+            amount: category?.amount ?? 0
+          };
         }
-        return f;
+
+        const numericAmount = typeof value === 'number' ? value : Number(value) || 0;
+        return { ...fee, amount: numericAmount };
       })
     }));
   };
@@ -315,7 +321,7 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
           <button
             type="button"
             onClick={() => setMode('single')}
-            className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+            className={`px-5 py-2.5 rounded-md font-medium text-sm transition-colors ${
               mode === 'single' 
                 ? 'bg-brand-primary text-white' 
                 : 'bg-neutral-100 text-text-secondary hover:bg-neutral-200'
@@ -326,7 +332,7 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
           <button
             type="button"
             onClick={() => setMode('bulk')}
-            className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
+            className={`px-5 py-2.5 rounded-md font-medium text-sm transition-colors flex items-center gap-2 ${
               mode === 'bulk' 
                 ? 'bg-brand-primary text-white' 
                 : 'bg-neutral-100 text-text-secondary hover:bg-neutral-200'
@@ -339,306 +345,295 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
       )}
 
       {/* Form */}
-      <div className="card max-w-[800px] border border-neutral-200">
+      <div className="max-w-[1100px]">
         <div className="space-y-6">
           {mode === 'single' ? (
-            <>
-              {/* Household Selection */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-                <label className="text-sm font-medium text-text-primary">
-                  Household *
-                </label>
-                <div className="relative" ref={householdRef}>
-                  <button
-                    type="button"
-                    className="input-default text-sm flex items-center justify-between"
-                    onClick={() => setIsHouseholdOpen(!isHouseholdOpen)}
-                  >
-                    <span className={formData.householdId ? 'text-text-primary' : 'text-text-secondary'}>
-                      {getHouseholdLabel(formData.householdId)}
-                    </span>
-                    <ChevronDown className={`size-4 text-text-secondary transition-transform ${isHouseholdOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {isHouseholdOpen && (
-                    <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 max-h-[200px] overflow-y-auto">
-                  {households.map(h => (
-                        <div
-                          key={h.id}
-                          className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
-                          onClick={() => {
-                            setFormData(prev => ({ ...prev, householdId: h.id }));
-                            setIsHouseholdOpen(false);
-                          }}
-                        >
-                      {h.unit} - {h.ownerName}
-                        </div>
-                  ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-bg-white rounded-2xl p-8 shadow-lg border border-border-light space-y-5">
+                <h3 className="font-semibold text-text-primary text-lg">Household & Fee</h3>
 
-              {/* Fee Category Selection */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-                <label className="text-sm font-medium text-text-primary">
-                  Fee Category *
-                </label>
-                <div className="relative" ref={categoryRef}>
-                  <button
-                    type="button"
-                    className="input-default text-sm flex items-center justify-between"
-                    onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                  >
-                    <span className={formData.feeCategoryId ? 'text-text-primary' : 'text-text-secondary'}>
-                      {getCategoryLabel(formData.feeCategoryId)}
-                    </span>
-                    <ChevronDown className={`size-4 text-text-secondary transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {isCategoryOpen && (
-                    <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 max-h-[200px] overflow-y-auto">
-                  {categories.map(c => (
-                        <div
-                          key={c.id}
-                          className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
-                          onClick={() => {
-                            setFormData(prev => ({ ...prev, feeCategoryId: c.id }));
-                            setIsCategoryOpen(false);
-                          }}
-                        >
-                      {c.name} - {formatCurrency(c.amount)} ({c.frequency})
-                        </div>
-                  ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Amount */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-                <label className="text-sm font-medium text-text-primary pt-3">
-                  Amount ($) *
-                </label>
                 <div>
-                <input
-                  type="number"
+                  <label className="text-sm font-medium text-text-primary mb-2 block">Household *</label>
+                  <div className="relative" ref={householdRef}>
+                    <button
+                      type="button"
+                      className="input-default text-sm flex items-center justify-between"
+                      onClick={() => setIsHouseholdOpen(!isHouseholdOpen)}
+                    >
+                      <span className={formData.householdId ? 'text-text-primary' : 'text-text-secondary'}>
+                        {getHouseholdLabel(formData.householdId)}
+                      </span>
+                      <ChevronDown className={`size-4 text-text-secondary transition-transform ${isHouseholdOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isHouseholdOpen && (
+                      <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 max-h-[260px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        {households.map(h => (
+                          <button
+                            key={h.id}
+                            type="button"
+                            className={`w-full px-4 py-3 text-left hover:bg-bg-hover transition-colors ${formData.householdId === h.id ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'}`}
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, householdId: h.id }));
+                              setIsHouseholdOpen(false);
+                            }}
+                          >
+                            <p className="leading-tight">{h.unit}</p>
+                            <p className="text-xs text-text-secondary">{h.ownerName}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-text-primary mb-2 block">Fee Category *</label>
+                  <div className="relative" ref={categoryRef}>
+                    <button
+                      type="button"
+                      className="input-default text-sm flex items-center justify-between"
+                      onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                    >
+                      <span className={formData.feeCategoryId ? 'text-text-primary' : 'text-text-secondary'}>
+                        {formData.feeCategoryId ? getCategoryLabel(formData.feeCategoryId) : 'Select a category'}
+                      </span>
+                      <ChevronDown className={`size-4 text-text-secondary transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isCategoryOpen && (
+                      <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 max-h-[260px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        {categories.map(c => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className={`w-full px-4 py-3 text-left hover:bg-bg-hover transition-colors ${formData.feeCategoryId === c.id ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'}`}
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, feeCategoryId: c.id, amount: payment ? prev.amount : c.amount }));
+                              setIsCategoryOpen(false);
+                            }}
+                          >
+                            <p className="leading-tight">{c.name}</p>
+                            <p className="text-xs text-text-secondary">{c.frequency}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-text-primary mb-2 block">Amount ($) *</label>
+                  <input
+                    type="number"
                     value={formData.amount || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
-                  min="0"
+                    onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                    min="0"
                     step="1"
                     placeholder="0"
                     className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
+                  />
                   <p className="text-xs text-text-secondary mt-1">{formatCurrency(formData.amount)}</p>
                 </div>
-              </div>
 
-              {/* Due Date */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-                <label className="text-sm font-medium text-text-primary">
-                  Due Date *
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="input-default text-sm flex items-center justify-between"
-                    >
-                      <span className="text-text-primary">
-                        {formData.dueDate ? format(new Date(formData.dueDate), 'PPP') : 'Pick a date'}
-                      </span>
-                      <CalendarIcon className="size-4 text-text-secondary" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-bg-white" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.dueDate ? new Date(formData.dueDate) : undefined}
-                      onSelect={(date) => setFormData(prev => ({ 
-                        ...prev, 
-                        dueDate: date ? format(date, 'yyyy-MM-dd') : prev.dueDate 
-                      }))}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Status */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-                <label className="text-sm font-medium text-text-primary">
-                  Status
-                </label>
-                <div className="relative" ref={statusRef}>
-                  <button
-                    type="button"
-                    className="input-default text-sm flex items-center justify-between"
-                    onClick={() => setIsStatusOpen(!isStatusOpen)}
-                  >
-                    {getStatusLabel(formData.status)}
-                    <ChevronDown className={`size-4 text-text-secondary transition-transform ${isStatusOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {isStatusOpen && (
-                    <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 overflow-hidden">
-                      {['pending', 'collected', 'overdue'].map(status => (
-                        <div
-                          key={status}
-                          className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
-                          onClick={() => {
-                            setFormData(prev => ({ ...prev, status: status as any }));
-                            setIsStatusOpen(false);
-                          }}
-                        >
-                          {getStatusLabel(status)}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div>
+                  <label className="text-sm font-medium text-text-primary mb-2 block">Due Date *</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="input-default text-sm flex items-center justify-between"
+                      >
+                        <span className="text-text-primary">
+                          {formData.dueDate ? format(new Date(formData.dueDate), 'PPP') : 'Pick a date'}
+                        </span>
+                        <CalendarIcon className="size-4 text-text-secondary" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-bg-white" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formData.dueDate ? new Date(formData.dueDate) : undefined}
+                        onSelect={(date) => setFormData(prev => ({ 
+                          ...prev, 
+                          dueDate: date ? format(date, 'yyyy-MM-dd') : prev.dueDate 
+                        }))}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
-              {/* Payment Method (only if collected) */}
-              {formData.status === 'collected' && (
-                <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-                  <label className="text-sm font-medium text-text-primary">
-                    Payment Method
-                  </label>
-                  <div className="relative" ref={paymentMethodRef}>
+              <div className="bg-bg-white rounded-2xl p-8 shadow-lg border border-border-light space-y-5">
+                <h3 className="font-semibold text-text-primary text-lg">Status & Notes</h3>
+
+                <div>
+                  <label className="text-sm font-medium text-text-primary mb-2 block">Status</label>
+                  <div className="relative" ref={statusRef}>
                     <button
                       type="button"
                       className="input-default text-sm flex items-center justify-between"
-                      onClick={() => setIsPaymentMethodOpen(!isPaymentMethodOpen)}
+                      onClick={() => setIsStatusOpen(!isStatusOpen)}
                     >
-                      <span className={formData.paymentMethod ? 'text-text-primary' : 'text-text-secondary'}>
-                        {getPaymentMethodLabel(formData.paymentMethod)}
-                      </span>
-                      <ChevronDown className={`size-4 text-text-secondary transition-transform ${isPaymentMethodOpen ? 'rotate-180' : ''}`} />
+                      {getStatusLabel(formData.status)}
+                      <ChevronDown className={`size-4 text-text-secondary transition-transform ${isStatusOpen ? 'rotate-180' : ''}`} />
                     </button>
-                    {isPaymentMethodOpen && (
-                      <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 overflow-hidden">
-                        {['cash', 'bank_transfer', 'card', 'online'].map(method => (
+                    {isStatusOpen && (
+                      <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        {['pending', 'collected', 'overdue'].map(status => (
                           <div
-                            key={method}
+                            key={status}
                             className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
                             onClick={() => {
-                              setFormData(prev => ({ ...prev, paymentMethod: method }));
-                              setIsPaymentMethodOpen(false);
+                              setFormData(prev => ({ ...prev, status: status as any }));
+                              setIsStatusOpen(false);
                             }}
                           >
-                            {getPaymentMethodLabel(method)}
+                            {getStatusLabel(status)}
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
                 </div>
-              )}
 
-              {/* Notes */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-                <label className="text-sm font-medium text-text-primary pt-3">
-                  Notes
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Optional notes..."
-                  rows={4}
-                  className="input-default text-sm resize-none"
-                />
-              </div>
-            </>
-          ) : (
-            /* Bulk Payment Form */
-            <>
-              {/* Households Selection */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-                <label className="text-sm font-medium text-text-primary pt-3">
-                  Households *
-                </label>
-                <div>
-                  <div className="border border-border-light rounded-lg bg-bg-white overflow-hidden">
-                    {/* Select All Header */}
-                    <label className="flex items-center gap-3 px-4 py-3 bg-bg-hover border-b border-border-light cursor-pointer hover:bg-bg-page transition-colors">
-                      <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={bulkData.selectAll}
-                      onChange={(e) => setBulkData(prev => ({ 
-                        ...prev, 
-                        selectAll: e.target.checked,
-                        selectedHouseholds: e.target.checked ? households.map(h => h.id) : []
-                      }))}
-                          className="peer sr-only"
-                        />
-                        <div className="size-5 rounded border-2 border-border-light bg-bg-white peer-checked:bg-brand-primary peer-checked:border-brand-primary transition-colors flex items-center justify-center">
-                          <svg className="size-3 text-white opacity-0 peer-checked:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
+                {formData.status === 'collected' && (
+                  <div>
+                    <label className="text-sm font-medium text-text-primary mb-2 block">Payment Method</label>
+                    <div className="relative" ref={paymentMethodRef}>
+                      <button
+                        type="button"
+                        className="input-default text-sm flex items-center justify-between"
+                        onClick={() => setIsPaymentMethodOpen(!isPaymentMethodOpen)}
+                      >
+                        <span className={formData.paymentMethod ? 'text-text-primary' : 'text-text-secondary'}>
+                          {getPaymentMethodLabel(formData.paymentMethod)}
+                        </span>
+                        <ChevronDown className={`size-4 text-text-secondary transition-transform ${isPaymentMethodOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      {isPaymentMethodOpen && (
+                        <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 overflow-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                          {['cash', 'bank_transfer', 'card', 'online'].map(method => (
+                            <div
+                              key={method}
+                              className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, paymentMethod: method }));
+                                setIsPaymentMethodOpen(false);
+                              }}
+                            >
+                              {getPaymentMethodLabel(method)}
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                      <span className="font-medium text-sm text-text-primary">Select All ({households.length})</span>
-                  </label>
-                    
-                    {/* Household List */}
-                    <div className="max-h-[180px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                      <div className="p-2 space-y-1">
-                    {households.map(h => (
-                          <label 
-                            key={h.id} 
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
-                              bulkData.selectedHouseholds.includes(h.id) 
-                                ? 'bg-brand-primary/10 border border-brand-primary/20' 
-                                : 'hover:bg-bg-hover border border-transparent'
-                            }`}
-                          >
-                            <div className="relative flex-shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={bulkData.selectedHouseholds.includes(h.id)}
-                          onChange={() => toggleHousehold(h.id)}
-                                className="peer sr-only"
-                              />
-                              <div className={`size-5 rounded border-2 transition-colors flex items-center justify-center ${
-                                bulkData.selectedHouseholds.includes(h.id) 
-                                  ? 'bg-brand-primary border-brand-primary' 
-                                  : 'border-border-light bg-bg-white'
-                              }`}>
-                                {bulkData.selectedHouseholds.includes(h.id) && (
-                                  <svg className="size-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                  </svg>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-sm font-medium text-text-primary">{h.unit}</span>
-                              <span className="text-sm text-text-secondary ml-2">- {h.ownerName}</span>
-                            </div>
-                      </label>
-                    ))}
-                      </div>
+                      )}
                     </div>
                   </div>
-                  <p className="text-xs text-text-secondary mt-2">
-                    <span className="font-medium text-brand-primary">{bulkData.selectedHouseholds.length}</span> of {households.length} households selected
-                  </p>
+                )}
+
+                <div>
+                  <label className="text-sm font-medium text-text-primary mb-2 block">Notes</label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Optional notes..."
+                    rows={6}
+                    className="input-default text-sm resize-none"
+                  />
                 </div>
               </div>
+            </div>
+          ) : (
+            /* Bulk Payment Form */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-bg-white rounded-2xl p-8 shadow-lg border border-border-light space-y-5 h-full flex flex-col">
+                <h3 className="font-semibold text-text-primary text-lg">Households</h3>
+                <div className="border border-border-light rounded-lg bg-bg-white overflow-hidden">
+                  <label className="flex items-center gap-3 px-4 py-3 bg-bg-hover border-b border-border-light cursor-pointer hover:bg-bg-page transition-colors">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={bulkData.selectAll}
+                        onChange={(e) => setBulkData(prev => ({ 
+                          ...prev, 
+                          selectAll: e.target.checked,
+                          selectedHouseholds: e.target.checked ? households.map(h => h.id) : []
+                        }))}
+                        className="peer sr-only"
+                      />
+                      <div className="size-5 rounded border-2 border-border-light bg-bg-white peer-checked:bg-brand-primary peer-checked:border-brand-primary transition-colors flex items-center justify-center">
+                        <svg className="size-3 text-white opacity-0 peer-checked:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+                    <span className="font-medium text-sm text-text-primary">Select All ({households.length})</span>
+                  </label>
 
-              {/* Fee Categories */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-                <label className="text-sm font-medium text-text-primary pt-3">
-                  Fee Categories *
-                </label>
-                <div>
+                  <div className="max-h-[260px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    <div className="p-2 space-y-1">
+                      {households.map(h => (
+                        <label 
+                          key={h.id} 
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
+                            bulkData.selectedHouseholds.includes(h.id) 
+                              ? 'bg-brand-primary/10 border border-brand-primary/20' 
+                              : 'hover:bg-bg-hover border border-transparent'
+                          }`}
+                        >
+                          <div className="relative shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={bulkData.selectedHouseholds.includes(h.id)}
+                              onChange={() => toggleHousehold(h.id)}
+                              className="peer sr-only"
+                            />
+                            <div className={`size-5 rounded border-2 transition-colors flex items-center justify-center ${
+                              bulkData.selectedHouseholds.includes(h.id) 
+                                ? 'bg-brand-primary border-brand-primary' 
+                                : 'border-border-light bg-bg-white'
+                            }`}>
+                              {bulkData.selectedHouseholds.includes(h.id) && (
+                                <svg className="size-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-text-primary">{h.unit}</span>
+                            <span className="text-sm text-text-secondary ml-2">- {h.ownerName}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-text-secondary">
+                  <span className="font-medium text-brand-primary">{bulkData.selectedHouseholds.length}</span> of {households.length} households selected
+                </p>
+              </div>
+
+              <div className="bg-bg-white rounded-2xl p-8 shadow-lg border border-border-light space-y-5 h-full flex flex-col">
+                <h3 className="font-semibold text-text-primary text-lg">Fees & Details</h3>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-text-primary">Fee Categories *</span>
+                    <button
+                      type="button"
+                      onClick={addFeeItem}
+                      className="text-sm font-medium text-brand-primary hover:text-brand-primary/80 flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" /> Add
+                    </button>
+                  </div>
                   <div className="border border-border-light rounded-lg bg-bg-white overflow-hidden">
-                    {/* Fee Items List */}
                     <div className="divide-y divide-border-light">
-                      {bulkData.fees.map((fee, index) => {
+                      {bulkData.fees.map((fee) => {
                         const selectedCategory = categories.find(c => c.id === fee.feeCategoryId);
                         return (
                           <div key={fee.id} className="p-3 flex gap-3 items-center hover:bg-bg-hover/50 transition-colors">
-                      <div className="flex-1">
+                            <div className="flex-1">
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <button
@@ -653,7 +648,7 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[320px] p-0 bg-bg-white" align="start">
                                   <div className="max-h-[200px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                          {categories.map(c => (
+                                    {categories.map(c => (
                                       <div
                                         key={c.id}
                                         className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm transition-colors ${
@@ -664,143 +659,122 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
                                         <div className="font-medium">{c.name}</div>
                                         <div className="text-xs text-text-secondary mt-0.5">{formatCurrency(c.amount)} • {c.frequency}</div>
                                       </div>
-                          ))}
+                                    ))}
                                   </div>
                                 </PopoverContent>
                               </Popover>
-                      </div>
+                            </div>
                             <div className="w-28">
-                        <input
-                          type="number"
+                              <input
+                                type="number"
                                 value={fee.amount || ''}
-                          onChange={(e) => updateFeeItem(fee.id, 'amount', parseFloat(e.target.value) || 0)}
+                                onChange={(e) => updateFeeItem(fee.id, 'amount', parseFloat(e.target.value) || 0)}
                                 className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none text-center"
-                          min="0"
+                                min="0"
                                 placeholder="0"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFeeItem(fee.id)}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFeeItem(fee.id)}
                               className={`p-2 rounded-lg transition-colors ${
                                 bulkData.fees.length === 1 
                                   ? 'opacity-30 cursor-not-allowed' 
                                   : 'hover:bg-red-50 text-red-500'
                               }`}
-                        disabled={bulkData.fees.length === 1}
-                      >
+                              disabled={bulkData.fees.length === 1}
+                            >
                               <X className="w-5 h-5" />
-                      </button>
+                            </button>
                           </div>
                         );
                       })}
                     </div>
-                    {/* Add Fee Button */}
-                <button
-                  type="button"
-                  onClick={addFeeItem}
-                      className="w-full p-3 flex items-center justify-center gap-2 text-brand-primary hover:bg-bg-hover border-t border-border-light transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-sm font-medium">Add Another Fee</span>
-                </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Due Date */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-                <label className="text-sm font-medium text-text-primary">
-                  Due Date *
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="input-default text-sm flex items-center justify-between"
-                    >
-                      <span className="text-text-primary">
-                        {bulkData.dueDate ? format(new Date(bulkData.dueDate), 'PPP') : 'Pick a date'}
-                      </span>
-                      <CalendarIcon className="size-4 text-text-secondary" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-bg-white" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={bulkData.dueDate ? new Date(bulkData.dueDate) : undefined}
-                      onSelect={(date) => setBulkData(prev => ({ 
-                        ...prev, 
-                        dueDate: date ? format(date, 'yyyy-MM-dd') : prev.dueDate 
-                      }))}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Status */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-center">
-                <label className="text-sm font-medium text-text-primary">
-                  Initial Status
-                </label>
-                <div className="relative" ref={bulkStatusRef}>
-                  <button
-                    type="button"
-                    className="input-default text-sm flex items-center justify-between"
-                    onClick={() => setIsBulkStatusOpen(!isBulkStatusOpen)}
-                  >
-                    {getStatusLabel(bulkData.status)}
-                    <ChevronDown className={`size-4 text-text-secondary transition-transform ${isBulkStatusOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {isBulkStatusOpen && (
-                    <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 overflow-hidden">
-                      {['pending', 'overdue'].map(status => (
-                        <div
-                          key={status}
-                          className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
-                          onClick={() => {
-                            setBulkData(prev => ({ ...prev, status: status as any }));
-                            setIsBulkStatusOpen(false);
-                          }}
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium text-text-primary">Due Date *</span>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="input-default text-sm flex items-center justify-between"
                         >
-                          {getStatusLabel(status)}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+                          <span className="text-text-primary">
+                            {bulkData.dueDate ? format(new Date(bulkData.dueDate), 'PPP') : 'Pick a date'}
+                          </span>
+                          <CalendarIcon className="size-4 text-text-secondary" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-bg-white" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={bulkData.dueDate ? new Date(bulkData.dueDate) : undefined}
+                          onSelect={(date) => setBulkData(prev => ({ 
+                            ...prev, 
+                            dueDate: date ? format(date, 'yyyy-MM-dd') : prev.dueDate 
+                          }))}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
 
-              {/* Summary */}
-              <div className="grid grid-cols-[200px,1fr] gap-6 items-start">
-                <label className="text-sm font-medium text-text-primary pt-3">
-                  Summary
-                </label>
-              <div className="bg-neutral-50 rounded-lg p-4">
-                  <div className="text-sm text-text-secondary space-y-2">
-                    <div className="flex justify-between">
-                      <span>Households:</span>
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium text-text-primary">Initial Status</span>
+                    <div className="relative" ref={bulkStatusRef}>
+                      <button
+                        type="button"
+                        className="input-default text-sm flex items-center justify-between"
+                        onClick={() => setIsBulkStatusOpen(!isBulkStatusOpen)}
+                      >
+                        {getStatusLabel(bulkData.status)}
+                        <ChevronDown className={`size-4 text-text-secondary transition-transform ${isBulkStatusOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      {isBulkStatusOpen && (
+                        <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 overflow-hidden">
+                          {['pending', 'overdue'].map(status => (
+                            <div
+                              key={status}
+                              className="px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors"
+                              onClick={() => {
+                                setBulkData(prev => ({ ...prev, status: status as any }));
+                                setIsBulkStatusOpen(false);
+                              }}
+                            >
+                              {getStatusLabel(status)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-neutral-50 rounded-lg p-4 border border-border-light space-y-2">
+                    <div className="flex justify-between text-sm text-text-secondary">
+                      <span>Households</span>
                       <span className="font-medium text-text-primary">{bulkData.selectedHouseholds.length}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Fee Categories:</span>
+                    <div className="flex justify-between text-sm text-text-secondary">
+                      <span>Fee Categories</span>
                       <span className="font-medium text-text-primary">{bulkData.fees.filter(f => f.feeCategoryId).length}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Total Records:</span>
+                    <div className="flex justify-between text-sm text-text-secondary">
+                      <span>Total Records</span>
                       <span className="font-medium text-text-primary">
-                    {bulkData.selectedHouseholds.length * bulkData.fees.filter(f => f.feeCategoryId).length}
+                        {bulkData.selectedHouseholds.length * bulkData.fees.filter(f => f.feeCategoryId).length}
                       </span>
                     </div>
-                    <div className="flex justify-between pt-2 border-t border-border-light">
-                      <span>Total Amount:</span>
+                    <div className="flex justify-between pt-2 border-t border-border-light text-sm text-text-secondary">
+                      <span>Total Amount</span>
                       <span className="font-semibold text-brand-primary text-lg">{formatCurrency(bulkTotal)}</span>
                     </div>
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
 

@@ -138,7 +138,7 @@ async function main() {
         residents: 4,
         phone: '0956789012',
         email: 'robert.taylor@email.com',
-        status: 'inactive'
+        status: 'active'
       }
     })
   ])
