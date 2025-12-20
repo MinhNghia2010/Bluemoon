@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { householdsApi } from '@/lib/api';
 import { AddSquareIcon } from '../shared/AddSquareIcon';
@@ -19,22 +19,19 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
     unit: bill?.unit || '',
     ownerName: bill?.ownerName || '',
     month: bill?.month || '',
-    type: bill?.type || 'electricity',
     electricityUsage: bill?.electricityUsage?.toString() || '',
-    electricityRate: '0.15', // $0.15 per kWh
+    electricityRate: bill?.electricityRate?.toString() || '0.15', // $0.15 per kWh
     waterUsage: bill?.waterUsage?.toString() || '',
-    waterRate: '1.5', // $1.5 per m³
-    internetCost: bill?.internetCost?.toString() || '30',
+    waterRate: bill?.waterRate?.toString() || '1.5', // $1.5 per m³
+    internetCost: bill?.internetCost?.toString() || '',
     status: bill?.status || 'pending',
     phone: bill?.phone || '',
   });
 
   const [households, setHouseholds] = useState<{ id: string; unit: string; ownerName: string; phone: string }[]>([]);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [isHouseholdOpen, setIsHouseholdOpen] = useState(false);
   const householdRef = useRef<HTMLDivElement>(null);
-  const typeRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -81,9 +78,6 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
       if (householdRef.current && !householdRef.current.contains(event.target as Node)) {
         setIsHouseholdOpen(false);
       }
-      if (typeRef.current && !typeRef.current.contains(event.target as Node)) {
-        setIsTypeOpen(false);
-      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -115,16 +109,23 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
 
     const electricityUsage = parseFloat(formData.electricityUsage) || 0;
     const waterUsage = parseFloat(formData.waterUsage) || 0;
+    const internetCost = parseFloat(formData.internetCost) || 0;
 
     onSave({
-      ...formData,
-      type: formData.type as UtilityBill['type'],
+      householdId: formData.householdId,
+      unit: formData.unit,
+      ownerName: formData.ownerName,
+      month: formData.month,
+      phone: formData.phone,
+      status: formData.status as UtilityBill['status'],
       electricityUsage,
+      electricityRate: parseFloat(formData.electricityRate) || 0.15,
       electricityCost: calculatedCosts.electricityCost,
       waterUsage,
+      waterRate: parseFloat(formData.waterRate) || 1.5,
       waterCost: calculatedCosts.waterCost,
-      internetCost: parseFloat(formData.internetCost),
-      totalCost: calculatedCosts.totalCost,
+      internetCost,
+      totalAmount: calculatedCosts.totalCost,
     });
     toast.success(bill ? 'Bill updated successfully' : 'Bill added successfully');
   };
@@ -152,12 +153,6 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
     return status ? status.color : 'bg-gray-500';
   };
 
-  const typeOptions = [
-    { value: 'electricity', label: 'Electricity' },
-    { value: 'water', label: 'Water' },
-    { value: 'internet', label: 'Internet' },
-  ];
-
   const selectedHousehold = households.find(h => h.id === formData.householdId);
 
   const handleHouseholdSelect = (id: string) => {
@@ -175,8 +170,6 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
     }
   };
 
-  const getTypeLabel = () => typeOptions.find(t => t.value === formData.type)?.label || 'Select type';
-
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -192,18 +185,9 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
     const waterUsage = parseFloat(formData.waterUsage) || 0;
     const internetCost = parseFloat(formData.internetCost) || 0;
 
-    if (formData.type === 'electricity' && electricityUsage <= 0) {
-      newErrors.electricityUsage = 'Enter electricity usage';
-    }
-    if (formData.type === 'water' && waterUsage <= 0) {
-      newErrors.waterUsage = 'Enter water usage';
-    }
-    if (formData.type === 'internet' && internetCost <= 0) {
-      newErrors.internetCost = 'Enter internet cost';
-    }
-
-    if (calculatedCosts.totalCost <= 0 || (!electricityUsage && !waterUsage && !internetCost)) {
-      newErrors.total = 'Add at least one utility amount';
+    // At least one utility must have a value
+    if (electricityUsage <= 0 && waterUsage <= 0 && internetCost <= 0) {
+      newErrors.total = 'At least one utility must have a value';
     }
 
     setErrors(newErrors);
@@ -237,10 +221,10 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
                 <div className="relative" ref={householdRef}>
                   <button
                     type="button"
-                    className={`input-default text-sm flex items-center justify-between ${errors.householdId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                    className={`input-default text-sm flex items-center justify-between ${formData.householdId ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.householdId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
                     onClick={() => setIsHouseholdOpen(!isHouseholdOpen)}
                   >
-                    <div className="text-left">
+                    <div className="text-left flex-1">
                       <p className="text-text-primary font-medium leading-tight">
                         {selectedHousehold ? `${selectedHousehold.unit}` : 'Select household'}
                       </p>
@@ -248,7 +232,12 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
                         {selectedHousehold ? selectedHousehold.ownerName : 'Choose a unit to link this bill'}
                       </p>
                     </div>
-                    <ChevronDown className={`size-4 text-text-secondary transition-transform ${isHouseholdOpen ? 'rotate-180' : ''}`} />
+                    <div className="flex items-center gap-2">
+                      {formData.householdId && (
+                        <Check className="w-4 h-4 text-green-500" />
+                      )}
+                      <ChevronDown className={`size-4 text-text-secondary transition-transform ${isHouseholdOpen ? 'rotate-180' : ''}`} />
+                    </div>
                   </button>
                   {isHouseholdOpen && (
                     <div className="absolute z-10 bg-bg-white border border-border-light rounded-lg shadow-lg w-full mt-1 overflow-hidden max-h-72 overflow-y-auto">
@@ -300,47 +289,23 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
                 <label className="block text-sm font-medium text-text-primary mb-2">
                   Billing Period *
                 </label>
-                <input
-                  type="text"
-                  value={formData.month}
-                  onChange={(e) => handleChange('month', e.target.value)}
-                  className={`input-default text-sm ${errors.month ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="e.g., December 2025"
-                  required
-                />
-                {errors.month && <p className="mt-0.5 text-sm text-red-500">{errors.month}</p>}
-              </div>
-
-              {/* Type */}
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">Bill Type *</label>
-                <div className="relative" ref={typeRef}>
-                  <button
-                    type="button"
-                    className="input-default text-sm flex items-center justify-between"
-                    onClick={() => setIsTypeOpen(!isTypeOpen)}
-                  >
-                    <span className="text-text-primary">{getTypeLabel()}</span>
-                    <ChevronDown className={`size-4 text-text-secondary transition-transform ${isTypeOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {isTypeOpen && (
-                    <div className="absolute z-10 bg-bg-white border border-border-light rounded-lg shadow-lg w-full mt-1 overflow-hidden">
-                      {typeOptions.map(option => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          className={`w-full px-4 py-3 text-left text-sm hover:bg-bg-hover transition-colors ${formData.type === option.value ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'}`}
-                          onClick={() => {
-                            handleChange('type', option.value);
-                            setIsTypeOpen(false);
-                          }}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.month}
+                    onChange={(e) => handleChange('month', e.target.value)}
+                    className={`input-default text-sm pr-10 ${formData.month.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.month ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="e.g., December 2025"
+                    required
+                  />
+                  {formData.month.trim().length > 0 && (
+                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                  )}
+                  {formData.month.trim().length === 0 && errors.month && (
+                    <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
                   )}
                 </div>
+                {errors.month && <p className="mt-0.5 text-sm text-red-500">{errors.month}</p>}
               </div>
 
               {/* Status */}
@@ -397,16 +362,21 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
                     <label className="block text-xs text-text-secondary mb-2">
                       Usage (kWh) *
                     </label>
-                    <input
-                      type="number"
-                      value={formData.electricityUsage}
-                      onChange={(e) => handleChange('electricityUsage', e.target.value)}
-                      className={`input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${errors.electricityUsage ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                      placeholder="0"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={formData.electricityUsage}
+                        onChange={(e) => handleChange('electricityUsage', e.target.value)}
+                        className={`input-default text-sm pr-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${formData.electricityUsage && parseFloat(formData.electricityUsage) > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.electricityUsage ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                        placeholder="0"
+                        min="0"
+                        step="0.01"
+                        required
+                      />
+                      {formData.electricityUsage && parseFloat(formData.electricityUsage) > 0 && (
+                        <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                      )}
+                    </div>
                     {errors.electricityUsage && <p className="mt-0.5 text-xs text-red-500">{errors.electricityUsage}</p>}
                   </div>
                   <div>
@@ -438,16 +408,21 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
                     <label className="block text-xs text-text-secondary mb-2">
                       Usage (m³) *
                     </label>
-                    <input
-                      type="number"
-                      value={formData.waterUsage}
-                      onChange={(e) => handleChange('waterUsage', e.target.value)}
-                      className={`input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${errors.waterUsage ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                      placeholder="0"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={formData.waterUsage}
+                        onChange={(e) => handleChange('waterUsage', e.target.value)}
+                        className={`input-default text-sm pr-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${formData.waterUsage && parseFloat(formData.waterUsage) > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.waterUsage ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                        placeholder="0"
+                        min="0"
+                        step="0.01"
+                        required
+                      />
+                      {formData.waterUsage && parseFloat(formData.waterUsage) > 0 && (
+                        <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                      )}
+                    </div>
                     {errors.waterUsage && <p className="mt-0.5 text-xs text-red-500">{errors.waterUsage}</p>}
                   </div>
                   <div>
@@ -478,17 +453,22 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
                   <label className="block text-xs text-text-secondary mb-2">
                     Monthly Cost ($) *
                   </label>
-                  <input
-                    type="number"
-                    value={formData.internetCost}
-                    onChange={(e) => handleChange('internetCost', e.target.value)}
-                      className={`input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${errors.internetCost ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                    placeholder="30"
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                    {errors.internetCost && <p className="mt-0.5 text-xs text-red-500">{errors.internetCost}</p>}
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.internetCost}
+                      onChange={(e) => handleChange('internetCost', e.target.value)}
+                      className={`input-default text-sm pr-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${formData.internetCost && parseFloat(formData.internetCost) > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.internetCost ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                      placeholder="30"
+                      min="0"
+                      step="0.01"
+                      required
+                    />
+                    {formData.internetCost && parseFloat(formData.internetCost) > 0 && (
+                      <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                    )}
+                  </div>
+                  {errors.internetCost && <p className="mt-0.5 text-xs text-red-500">{errors.internetCost}</p>}
                 </div>
               </div>
             </div>
@@ -508,7 +488,14 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn-secondary"
+          >
+            Cancel
+          </button>
           <button
             type="submit"
             className="btn-primary flex items-center gap-2"
@@ -517,13 +504,6 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
               <AddSquareIcon className="relative size-5" />
             </div>
             {bill ? 'Update Bill' : 'Add Bill'}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="btn-secondary"
-          >
-            Cancel
           </button>
         </div>
       </form>

@@ -15,13 +15,14 @@ export interface UtilityBill {
   unit: string;
   ownerName: string;
   month: string;
-  type: string;
   electricityUsage: number;
+  electricityRate: number;
   electricityCost: number;
   waterUsage: number;
+  waterRate: number;
   waterCost: number;
   internetCost: number;
-  totalCost: number;
+  totalAmount: number;
   status: 'paid' | 'pending' | 'overdue';
   phone: string;
   householdId?: string;
@@ -44,14 +45,15 @@ export function UtilitiesView() {
         id: bill.id,
         unit: bill.household?.unit || 'Unknown',
         ownerName: bill.household?.ownerName || 'Unknown',
-        month: new Date(bill.periodStart).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-        type: bill.type,
-        electricityUsage: bill.type === 'electricity' ? 100 : 0,
-        electricityCost: bill.type === 'electricity' ? bill.amount : 0,
-        waterUsage: bill.type === 'water' ? 10 : 0,
-        waterCost: bill.type === 'water' ? bill.amount : 0,
-        internetCost: bill.type === 'internet' ? bill.amount : 0,
-        totalCost: bill.amount,
+        month: bill.month || new Date(bill.periodStart).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        electricityUsage: bill.electricityUsage || 0,
+        electricityRate: bill.electricityRate || 0.15,
+        electricityCost: bill.electricityCost || 0,
+        waterUsage: bill.waterUsage || 0,
+        waterRate: bill.waterRate || 1.5,
+        waterCost: bill.waterCost || 0,
+        internetCost: bill.internetCost || 0,
+        totalAmount: bill.totalAmount || 0,
         status: bill.status,
         phone: bill.household?.phone || '',
         householdId: bill.householdId
@@ -76,18 +78,31 @@ export function UtilitiesView() {
     try {
       if (viewMode === 'edit' && selectedBill) {
         await utilitiesApi.update(selectedBill.id, {
-          amount: data.totalCost,
+          month: data.month,
+          electricityUsage: data.electricityUsage,
+          electricityRate: data.electricityRate,
+          electricityCost: data.electricityCost,
+          waterUsage: data.waterUsage,
+          waterRate: data.waterRate,
+          waterCost: data.waterCost,
+          internetCost: data.internetCost,
+          totalAmount: data.totalAmount,
           status: data.status
         });
         toast.success('Utility bill updated successfully');
       } else {
         await utilitiesApi.create({
           householdId: data.householdId,
-          type: data.type || 'electricity',
-          amount: data.totalCost,
-          periodStart: new Date().toISOString(),
-          periodEnd: new Date().toISOString(),
-          dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          month: data.month,
+          electricityUsage: data.electricityUsage,
+          electricityRate: data.electricityRate,
+          electricityCost: data.electricityCost,
+          waterUsage: data.waterUsage,
+          waterRate: data.waterRate,
+          waterCost: data.waterCost,
+          internetCost: data.internetCost,
+          totalAmount: data.totalAmount,
+          status: data.status
         });
         toast.success('Utility bill created successfully');
       }
@@ -157,10 +172,10 @@ export function UtilitiesView() {
     paid: utilityBills.filter(b => b.status === 'paid').length,
     pending: utilityBills.filter(b => b.status === 'pending').length,
     overdue: utilityBills.filter(b => b.status === 'overdue').length,
-    totalElectricity: utilityBills.filter(b => b.type === 'electricity').reduce((sum, b) => sum + b.totalCost, 0),
-    totalWater: utilityBills.filter(b => b.type === 'water').reduce((sum, b) => sum + b.totalCost, 0),
-    totalInternet: utilityBills.filter(b => b.type === 'internet').reduce((sum, b) => sum + b.totalCost, 0),
-    totalRevenue: utilityBills.reduce((sum, b) => sum + b.totalCost, 0),
+    totalElectricity: utilityBills.reduce((sum, b) => sum + (b.electricityCost || 0), 0),
+    totalWater: utilityBills.reduce((sum, b) => sum + (b.waterCost || 0), 0),
+    totalInternet: utilityBills.reduce((sum, b) => sum + (b.internetCost || 0), 0),
+    totalRevenue: utilityBills.reduce((sum, b) => sum + (b.totalAmount || 0), 0),
   };
 
   const statisticsCards = [

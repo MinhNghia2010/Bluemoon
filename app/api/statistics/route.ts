@@ -43,36 +43,20 @@ export async function GET() {
     // Get financial summaries for Utility Bills
     const utilitiesPaid = await prisma.utilityBill.aggregate({
       where: { status: 'paid' },
-      _sum: { amount: true }
+      _sum: { totalAmount: true, electricityCost: true, waterCost: true, internetCost: true }
     })
     const utilitiesPending = await prisma.utilityBill.aggregate({
       where: { status: 'pending' },
-      _sum: { amount: true }
+      _sum: { totalAmount: true, electricityCost: true, waterCost: true, internetCost: true }
     })
     const utilitiesOverdue = await prisma.utilityBill.aggregate({
       where: { status: 'overdue' },
-      _sum: { amount: true }
+      _sum: { totalAmount: true, electricityCost: true, waterCost: true, internetCost: true }
     })
 
-    // Get utility bills by type
-    const electricityTotal = await prisma.utilityBill.aggregate({
-      where: { type: 'electricity' },
-      _sum: { amount: true },
-      _count: true
-    })
-    const waterTotal = await prisma.utilityBill.aggregate({
-      where: { type: 'water' },
-      _sum: { amount: true },
-      _count: true
-    })
-    const internetTotal = await prisma.utilityBill.aggregate({
-      where: { type: 'internet' },
-      _sum: { amount: true },
-      _count: true
-    })
-    const gasTotal = await prisma.utilityBill.aggregate({
-      where: { type: 'gas' },
-      _sum: { amount: true },
+    // Get utility totals by type (from all bills)
+    const allUtilityTotals = await prisma.utilityBill.aggregate({
+      _sum: { electricityCost: true, waterCost: true, internetCost: true, totalAmount: true },
       _count: true
     })
 
@@ -119,11 +103,10 @@ export async function GET() {
         dueDate: { gte: sixMonthsAgo }
       },
       select: {
-        amount: true,
+        totalAmount: true,
         status: true,
         dueDate: true,
-        paidDate: true,
-        type: true
+        paidDate: true
       }
     })
 
@@ -155,11 +138,11 @@ export async function GET() {
       const monthKey = bill.dueDate.toISOString().slice(0, 7)
       if (monthlyRevenue[monthKey]) {
         if (bill.status === 'paid') {
-          monthlyRevenue[monthKey].collected += bill.amount
+          monthlyRevenue[monthKey].collected += bill.totalAmount
         } else if (bill.status === 'pending') {
-          monthlyRevenue[monthKey].pending += bill.amount
+          monthlyRevenue[monthKey].pending += bill.totalAmount
         } else if (bill.status === 'overdue') {
-          monthlyRevenue[monthKey].overdue += bill.amount
+          monthlyRevenue[monthKey].overdue += bill.totalAmount
         }
       }
     })
@@ -187,9 +170,9 @@ export async function GET() {
       : 0
 
     // Overall totals (including parking revenue)
-    const totalCollected = (paymentsCollected._sum.amount || 0) + (utilitiesPaid._sum.amount || 0) + monthlyParkingRevenue
-    const totalPending = (paymentsPending._sum.amount || 0) + (utilitiesPending._sum.amount || 0)
-    const totalOverdue = (paymentsOverdue._sum.amount || 0) + (utilitiesOverdue._sum.amount || 0)
+    const totalCollected = (paymentsCollected._sum.amount || 0) + (utilitiesPaid._sum.totalAmount || 0) + monthlyParkingRevenue
+    const totalPending = (paymentsPending._sum.amount || 0) + (utilitiesPending._sum.totalAmount || 0)
+    const totalOverdue = (paymentsOverdue._sum.amount || 0) + (utilitiesOverdue._sum.totalAmount || 0)
 
     return NextResponse.json({
       overview: {
@@ -222,15 +205,15 @@ export async function GET() {
       },
       // Utility Bills financials
       utilities: {
-        paid: utilitiesPaid._sum.amount || 0,
-        pending: utilitiesPending._sum.amount || 0,
-        overdue: utilitiesOverdue._sum.amount || 0,
-        total: (utilitiesPaid._sum.amount || 0) + (utilitiesPending._sum.amount || 0) + (utilitiesOverdue._sum.amount || 0),
+        paid: utilitiesPaid._sum.totalAmount || 0,
+        pending: utilitiesPending._sum.totalAmount || 0,
+        overdue: utilitiesOverdue._sum.totalAmount || 0,
+        total: (utilitiesPaid._sum.totalAmount || 0) + (utilitiesPending._sum.totalAmount || 0) + (utilitiesOverdue._sum.totalAmount || 0),
         byType: {
-          electricity: { amount: electricityTotal._sum.amount || 0, count: electricityTotal._count },
-          water: { amount: waterTotal._sum.amount || 0, count: waterTotal._count },
-          internet: { amount: internetTotal._sum.amount || 0, count: internetTotal._count },
-          gas: { amount: gasTotal._sum.amount || 0, count: gasTotal._count }
+          electricity: { amount: allUtilityTotals._sum.electricityCost || 0, count: allUtilityTotals._count },
+          water: { amount: allUtilityTotals._sum.waterCost || 0, count: allUtilityTotals._count },
+          internet: { amount: allUtilityTotals._sum.internetCost || 0, count: allUtilityTotals._count },
+          gas: { amount: 0, count: 0 }
         }
       },
       // Parking financials

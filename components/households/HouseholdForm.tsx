@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { Save, CalendarIcon } from 'lucide-react';
+import { Save, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DatePickerInput } from '../shared/DatePickerInput';
 
 interface Household {
   id: string;
@@ -119,14 +118,22 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Unit Number *</label>
-              <input
-                type="text"
-                name="unit"
-                value={formData.unit}
-                onChange={handleChange}
-                placeholder="e.g., 101"
-                className={`input-default text-sm ${errors.unit ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  name="unit"
+                  value={formData.unit}
+                  onChange={handleChange}
+                  placeholder="e.g., 101"
+                  className={`input-default text-sm pr-10 ${formData.unit.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.unit ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                />
+                {formData.unit.trim().length > 0 && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                )}
+                {formData.unit.trim().length === 0 && errors.unit && (
+                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                )}
+              </div>
               {errors.unit && (
                 <p className="mt-0.5 text-sm text-red-500">{errors.unit}</p>
               )}
@@ -134,14 +141,22 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Owner Name *</label>
-              <input
-                type="text"
-                name="ownerName"
-                value={formData.ownerName}
-                onChange={handleChange}
-                placeholder="Full name"
-                className={`input-default text-sm ${errors.ownerName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  name="ownerName"
+                  value={formData.ownerName}
+                  onChange={handleChange}
+                  placeholder="Full name"
+                  className={`input-default text-sm pr-10 ${formData.ownerName.trim().length >= 2 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.ownerName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                />
+                {formData.ownerName.trim().length >= 2 && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                )}
+                {formData.ownerName.trim().length < 2 && errors.ownerName && (
+                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                )}
+              </div>
               {errors.ownerName && (
                 <p className="mt-0.5 text-sm text-red-500">{errors.ownerName}</p>
               )}
@@ -150,53 +165,48 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">Area (m²)</label>
-                <input
-                  type="number"
-                  name="area"
-                  value={formData.area}
-                  onChange={handleChange}
-                  placeholder="e.g., 70"
-                  className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    name="area"
+                    value={formData.area}
+                    onChange={handleChange}
+                    placeholder="e.g., 70"
+                    className={`input-default text-sm pr-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${formData.area && parseFloat(formData.area) > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : ''}`}
+                  />
+                  {formData.area && parseFloat(formData.area) > 0 && (
+                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                  )}
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">Floor</label>
-                <input
-                  type="number"
-                  name="floor"
-                  value={formData.floor}
-                  onChange={handleChange}
-                  placeholder="e.g., 1"
-                  min="1"
-                  className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    name="floor"
+                    value={formData.floor}
+                    onChange={handleChange}
+                    placeholder="e.g., 1"
+                    min="1"
+                    className={`input-default text-sm pr-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${formData.floor && parseInt(formData.floor) > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : ''}`}
+                  />
+                  {formData.floor && parseInt(formData.floor) > 0 && (
+                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                  )}
+                </div>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Move-in Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="input-default text-sm flex items-center justify-between"
-                  >
-                    <span className={formData.moveInDate ? 'text-text-primary' : 'text-text-secondary'}>
-                      {formData.moveInDate ? format(formData.moveInDate, 'PPP') : 'Select move-in date'}
-                    </span>
-                    <CalendarIcon className="size-4 text-text-secondary" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.moveInDate}
-                    onSelect={(date) => setFormData(prev => ({ ...prev, moveInDate: date }))}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePickerInput
+                value={formData.moveInDate}
+                onChange={(date) => setFormData(prev => ({ ...prev, moveInDate: date }))}
+                placeholder="dd/mm/yyyy"
+                showValidation={true}
+              />
             </div>
           </div>
 
@@ -206,14 +216,31 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Phone Number *</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="e.g., 123-456-7890"
-                className={`input-default text-sm ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-              />
+              <div className="relative">
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    setFormData(prev => ({ ...prev, phone: value }));
+                    if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
+                  }}
+                  placeholder="e.g., 0912345678"
+                  className={`input-default text-sm pr-16 ${formData.phone.length >= 10 && formData.phone.length <= 11 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <span className={`text-xs ${formData.phone.length >= 10 && formData.phone.length <= 11 ? 'text-green-500' : 'text-text-muted'}`}>
+                    {formData.phone.length}/10-11
+                  </span>
+                  {formData.phone.length >= 10 && formData.phone.length <= 11 && (
+                    <Check className="w-4 h-4 text-green-500" />
+                  )}
+                  {formData.phone.length > 0 && (formData.phone.length < 10 || formData.phone.length > 11) && (
+                    <X className="w-4 h-4 text-red-500" />
+                  )}
+                </div>
+              </div>
               {errors.phone && (
                 <p className="mt-0.5 text-sm text-red-500">{errors.phone}</p>
               )}
@@ -221,14 +248,22 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Email Address *</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="e.g., john@example.com"
-                className={`input-default text-sm ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-              />
+              <div className="relative">
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="e.g., john@example.com"
+                  className={`input-default text-sm pr-10 ${/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                />
+                {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                )}
+                {formData.email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) && (
+                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                )}
+              </div>
               {errors.email && (
                 <p className="mt-0.5 text-sm text-red-500">{errors.email}</p>
               )}
@@ -237,20 +272,20 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            className="btn-primary flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {household ? 'Update Household' : 'Add Household'}
-          </button>
+        <div className="flex gap-3 justify-end">
           <button
             type="button"
             onClick={onCancel}
             className="btn-secondary"
           >
             Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn-primary flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            {household ? 'Update Household' : 'Add Household'}
           </button>
         </div>
       </form>

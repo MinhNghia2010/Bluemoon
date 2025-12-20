@@ -23,14 +23,22 @@ export async function GET(request: NextRequest) {
       ]
     }
 
+    // When fetching for a specific household, skip household relation (already known)
     const members = await prisma.householdMember.findMany({
       where,
-      include: {
-        household: {
+      select: {
+        id: true,
+        name: true,
+        dateOfBirth: true,
+        cccd: true,
+        profilePic: true,
+        householdId: true,
+        household: householdId ? false : {
           select: {
             id: true,
             unit: true,
-            ownerName: true
+            ownerName: true,
+            phone: true
           }
         }
       },

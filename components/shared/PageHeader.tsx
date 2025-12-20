@@ -1,6 +1,6 @@
 'use client'
 
-import { AddSquareIcon } from './AddSquareIcon';
+import { Plus } from 'lucide-react';
 
 interface PageHeaderProps {
   title: string;
@@ -31,9 +31,7 @@ export function PageHeader({
           onClick={onButtonClick}
           className="flex items-center gap-[8px] bg-[#5030e5] text-white px-[20px] py-[12px] rounded-[6px] hover:bg-[#4024c4] transition-colors"
         >
-          <div className="relative size-[20px]">
-            <AddSquareIcon className="relative size-[20px]" />
-          </div>
+          <Plus className="w-5 h-5" />
           <span className="font-medium text-[16px]">{buttonLabel}</span>
         </button>
       ) : null}

@@ -1,4 +1,9 @@
+'use client'
+
 import { useState } from 'react';
+import { Check, X } from 'lucide-react';
+import { usersApi } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 
 interface ChangePasswordFormProps {
   onSuccess: (message: string) => void;
@@ -8,11 +13,16 @@ interface ChangePasswordFormProps {
 }
 
 export function ChangePasswordForm({ onSuccess, onError, successMessage, errorMessage }: ChangePasswordFormProps) {
+  const { user } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const isNewPasswordValid = newPassword.length >= 6;
+  const doPasswordsMatch = newPassword === confirmPassword && confirmPassword.length > 0;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     onSuccess('');
     onError('');
@@ -32,10 +42,27 @@ export function ChangePasswordForm({ onSuccess, onError, successMessage, errorMe
       return;
     }
 
-    onSuccess('Password changed successfully!');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    if (!user?.id) {
+      onError('User not authenticated');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await usersApi.changePassword({
+        userId: user.id,
+        currentPassword,
+        newPassword
+      });
+      onSuccess('Password changed successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      onError(error.message || 'Failed to change password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -48,51 +75,77 @@ export function ChangePasswordForm({ onSuccess, onError, successMessage, errorMe
             <label className="block font-medium text-text-primary text-sm mb-[8px]">
               Current Password
             </label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => {
-                setCurrentPassword(e.target.value);
-                onError('');
-                onSuccess('');
-              }}
-              className="w-full h-[44px] px-[16px] bg-input-bg rounded-[6px] border-0 text-sm text-text-primary outline-none focus:ring-2 focus:ring-[#5030e5]"
-              placeholder="Enter current password"
-            />
+            <div className="relative">
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => {
+                  setCurrentPassword(e.target.value);
+                  onError('');
+                  onSuccess('');
+                }}
+                className={`w-full h-[44px] px-[16px] pr-10 bg-input-bg rounded-[6px] border ${currentPassword.length > 0 ? 'border-green-500' : 'border-transparent'} text-sm text-text-primary outline-none focus:ring-2 focus:ring-[#5030e5]`}
+                placeholder="Enter current password"
+              />
+              {currentPassword.length > 0 && (
+                <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+              )}
+            </div>
           </div>
 
           <div>
             <label className="block font-medium text-text-primary text-sm mb-[8px]">
               New Password
             </label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                onError('');
-                onSuccess('');
-              }}
-              className="w-full h-[44px] px-[16px] bg-input-bg rounded-[6px] border-0 text-sm text-text-primary outline-none focus:ring-2 focus:ring-[#5030e5]"
-              placeholder="Enter new password"
-            />
+            <div className="relative">
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  onError('');
+                  onSuccess('');
+                }}
+                className={`w-full h-[44px] px-[16px] pr-16 bg-input-bg rounded-[6px] border ${isNewPasswordValid ? 'border-green-500' : newPassword.length > 0 ? 'border-red-500' : 'border-transparent'} text-sm text-text-primary outline-none focus:ring-2 focus:ring-[#5030e5]`}
+                placeholder="Enter new password"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <span className={`text-xs ${isNewPasswordValid ? 'text-green-500' : 'text-text-muted'}`}>
+                  {newPassword.length}/6
+                </span>
+                {isNewPasswordValid && (
+                  <Check className="w-4 h-4 text-green-500" />
+                )}
+                {newPassword.length > 0 && !isNewPasswordValid && (
+                  <X className="w-4 h-4 text-red-500" />
+                )}
+              </div>
+            </div>
           </div>
 
           <div>
             <label className="block font-medium text-text-primary text-sm mb-[8px]">
               Confirm New Password
             </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                onError('');
-                onSuccess('');
-              }}
-              className="w-full h-[44px] px-[16px] bg-input-bg rounded-[6px] border-0 text-sm text-text-primary outline-none focus:ring-2 focus:ring-[#5030e5]"
-              placeholder="Confirm new password"
-            />
+            <div className="relative">
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  onError('');
+                  onSuccess('');
+                }}
+                className={`w-full h-[44px] px-[16px] pr-10 bg-input-bg rounded-[6px] border ${doPasswordsMatch ? 'border-green-500' : confirmPassword.length > 0 ? 'border-red-500' : 'border-transparent'} text-sm text-text-primary outline-none focus:ring-2 focus:ring-[#5030e5]`}
+                placeholder="Confirm new password"
+              />
+              {doPasswordsMatch && (
+                <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+              )}
+              {confirmPassword.length > 0 && !doPasswordsMatch && (
+                <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+              )}
+            </div>
           </div>
 
           {errorMessage && (
@@ -109,9 +162,10 @@ export function ChangePasswordForm({ onSuccess, onError, successMessage, errorMe
 
           <button
             type="submit"
-            className="w-full h-[44px] bg-[#5030e5] text-white rounded-[6px] font-['Inter:Medium',sans-serif] font-medium text-[16px] hover:bg-[#4024c4] transition-colors"
+            disabled={isLoading}
+            className="w-full h-[44px] bg-[#5030e5] text-white rounded-[6px] font-['Inter:Medium',sans-serif] font-medium text-[16px] hover:bg-[#4024c4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Change Password
+            {isLoading ? 'Changing...' : 'Change Password'}
           </button>
 
           <p className="text-text-secondary text-xs">

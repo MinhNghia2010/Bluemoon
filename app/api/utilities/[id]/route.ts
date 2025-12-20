@@ -53,13 +53,15 @@ export async function PUT(
       }
     }
 
-    if (data.amount) {
-      updateData.amount = parseFloat(data.amount)
-    }
-
-    if (data.type) {
-      updateData.type = data.type
-    }
+    if (data.month !== undefined) updateData.month = data.month
+    if (data.electricityUsage !== undefined) updateData.electricityUsage = data.electricityUsage
+    if (data.electricityRate !== undefined) updateData.electricityRate = data.electricityRate
+    if (data.electricityCost !== undefined) updateData.electricityCost = data.electricityCost
+    if (data.waterUsage !== undefined) updateData.waterUsage = data.waterUsage
+    if (data.waterRate !== undefined) updateData.waterRate = data.waterRate
+    if (data.waterCost !== undefined) updateData.waterCost = data.waterCost
+    if (data.internetCost !== undefined) updateData.internetCost = data.internetCost
+    if (data.totalAmount !== undefined) updateData.totalAmount = data.totalAmount
 
     const utilityBill = await prisma.utilityBill.update({
       where: { id },

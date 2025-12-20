@@ -1,9 +1,17 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import { CircleUser } from 'lucide-react';
+import { CircleUser, Search, Home, Users, CreditCard, Car, Zap } from 'lucide-react';
 import svgPaths from "@/imports/svg-uiac8iywkt";
 import { DarkModeToggle } from "./shared/DarkModeToggle";
+
+interface SearchResult {
+  type: 'household' | 'member' | 'payment' | 'parking' | 'utility'
+  id: string
+  title: string
+  subtitle: string
+  view: 'households' | 'demography' | 'feeCategories' | 'feeCollection' | 'statistics' | 'parking' | 'utilities' | 'settings'
+}
 
 function VuesaxTwotoneSearchNormal() {
   return (
@@ -34,11 +42,18 @@ function VuesaxOutlineArrowDown() {
 
 interface HeaderProps {
   onLogout: () => void;
+  onNavigate?: (view: 'households' | 'demography' | 'feeCategories' | 'feeCollection' | 'statistics' | 'parking' | 'utilities' | 'settings') => void;
 }
 
-export function Header({ onLogout }: HeaderProps) {
+export function Header({ onLogout, onNavigate }: HeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -46,29 +61,126 @@ export function Header({ onLogout }: HeaderProps) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
     }
 
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
-  }, [isDropdownOpen]);
+
+    if (searchQuery.length < 2) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+        const data = await response.json();
+        setSearchResults(data.results || []);
+        setShowResults(true);
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  const handleResultClick = (result: SearchResult) => {
+    if (onNavigate) {
+      onNavigate(result.view);
+    }
+    setSearchQuery('');
+    setShowResults(false);
+  };
+
+  const getResultIcon = (type: string) => {
+    switch (type) {
+      case 'household':
+        return <Home className="w-4 h-4" />;
+      case 'member':
+        return <Users className="w-4 h-4" />;
+      case 'payment':
+        return <CreditCard className="w-4 h-4" />;
+      case 'parking':
+        return <Car className="w-4 h-4" />;
+      case 'utility':
+        return <Zap className="w-4 h-4" />;
+      default:
+        return <Search className="w-4 h-4" />;
+    }
+  };
 
   return (
     <div className="bg-bg-white border-b border-border-light px-[40px] py-[20px]">
       <div className="flex items-center justify-between">
         {/* Search Bar */}
-        <div className="relative">
+        <div className="relative" ref={searchRef}>
           <div className="bg-neutral-100 h-[44px] w-[417px] rounded-[6px] flex items-center px-[16px]">
             <div className="relative size-[22px] mr-[12px]">
-              <VuesaxTwotoneSearchNormal />
+              {isSearching ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#5030e5]" />
+              ) : (
+                <VuesaxTwotoneSearchNormal />
+              )}
             </div>
             <input
               type="text"
               placeholder="Search for anything..."
-              className="flex-1 bg-transparent border-0 outline-none text-sm text-text-secondary placeholder:text-text-secondary"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.length >= 2 && setShowResults(true)}
+              className="flex-1 bg-transparent border-0 outline-none text-sm text-text-primary placeholder:text-text-secondary"
             />
           </div>
+          
+          {/* Search Results Dropdown */}
+          {showResults && searchResults.length > 0 && (
+            <div className="absolute top-full left-0 mt-2 w-full bg-bg-white rounded-[8px] shadow-lg border border-border-light z-50 max-h-[400px] overflow-y-auto">
+              {searchResults.map((result) => (
+                <button
+                  key={`${result.type}-${result.id}`}
+                  onClick={() => handleResultClick(result)}
+                  className="w-full px-4 py-3 text-left hover:bg-bg-hover transition-colors flex items-start gap-3 border-b border-border-light last:border-b-0"
+                >
+                  <div className="mt-0.5 text-text-secondary">
+                    {getResultIcon(result.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text-primary truncate">{result.title}</p>
+                    <p className="text-xs text-text-secondary truncate">{result.subtitle}</p>
+                  </div>
+                  <span className="text-xs text-text-muted capitalize bg-bg-hover px-2 py-1 rounded">
+                    {result.type}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {/* No results message */}
+          {showResults && searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
+            <div className="absolute top-full left-0 mt-2 w-full bg-bg-white rounded-[8px] shadow-lg border border-border-light z-50 p-4 text-center text-text-secondary text-sm">
+              No results found for "{searchQuery}"
+            </div>
+          )}
         </div>
 
         {/* User Profile */}

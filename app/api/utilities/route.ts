@@ -8,17 +8,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
-    const type = searchParams.get('type')
     const householdId = searchParams.get('householdId')
 
     const where: any = {}
     
     if (status && status !== 'all') {
       where.status = status
-    }
-    
-    if (type && type !== 'all') {
-      where.type = type
     }
 
     if (householdId) {
@@ -29,7 +24,7 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         household: {
-          select: { id: true, unit: true, ownerName: true }
+          select: { id: true, unit: true, ownerName: true, phone: true }
         }
       },
       orderBy: { dueDate: 'desc' }
@@ -50,24 +45,52 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
 
-    const { householdId, type, amount, periodStart, periodEnd, dueDate } = data
+    const { 
+      householdId, 
+      month,
+      periodStart, 
+      periodEnd, 
+      dueDate,
+      electricityUsage,
+      electricityRate,
+      electricityCost,
+      waterUsage,
+      waterRate,
+      waterCost,
+      internetCost,
+      totalAmount,
+      status
+    } = data
 
-    if (!householdId || !type || !amount || !periodStart || !periodEnd || !dueDate) {
+    if (!householdId || !month) {
       return NextResponse.json(
-        { error: 'All fields are required' },
+        { error: 'Household and billing period are required' },
         { status: 400 }
       )
     }
 
+    // Calculate period dates from month string (e.g., "December 2025")
+    const now = new Date()
+    const periodStartDate = periodStart ? new Date(periodStart) : new Date(now.getFullYear(), now.getMonth(), 1)
+    const periodEndDate = periodEnd ? new Date(periodEnd) : new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const dueDateValue = dueDate ? new Date(dueDate) : new Date(now.getFullYear(), now.getMonth() + 1, 15) // 15th of next month
+
     const utilityBill = await prisma.utilityBill.create({
       data: {
         householdId,
-        type,
-        amount: parseFloat(amount),
-        periodStart: new Date(periodStart),
-        periodEnd: new Date(periodEnd),
-        dueDate: new Date(dueDate),
-        status: 'pending'
+        month,
+        periodStart: periodStartDate,
+        periodEnd: periodEndDate,
+        dueDate: dueDateValue,
+        electricityUsage: electricityUsage || 0,
+        electricityRate: electricityRate || 0.15,
+        electricityCost: electricityCost || 0,
+        waterUsage: waterUsage || 0,
+        waterRate: waterRate || 1.5,
+        waterCost: waterCost || 0,
+        internetCost: internetCost || 0,
+        totalAmount: totalAmount || 0,
+        status: status || 'pending'
       },
       include: {
         household: true

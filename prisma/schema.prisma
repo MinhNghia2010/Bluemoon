@@ -54,9 +54,9 @@ model HouseholdMember {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  // Relations
-  householdId String?
-  household   Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  // Relations - householdId is required (every resident must belong to a household)
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
 }
 
 // Fee Category model - types of fees
@@ -109,18 +109,31 @@ model ParkingSlot {
   household   Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
 }
 
-// Utility Bill model
+// Utility Bill model - combined utility billing per household
 model UtilityBill {
-  id          String    @id @default(cuid())
-  type        String    // electricity, water, gas, internet
-  amount      Float
-  periodStart DateTime
-  periodEnd   DateTime
-  dueDate     DateTime
-  status      String    @default("pending") // pending, paid, overdue
-  paidDate    DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  // Billing period
+  periodStart      DateTime
+  periodEnd        DateTime
+  month            String    // e.g., "December 2025"
+  dueDate          DateTime
+  // Electricity
+  electricityUsage Float     @default(0) // kWh
+  electricityRate  Float     @default(0.15) // $/kWh
+  electricityCost  Float     @default(0)
+  // Water
+  waterUsage       Float     @default(0) // m³
+  waterRate        Float     @default(1.5) // $/m³
+  waterCost        Float     @default(0)
+  // Internet
+  internetCost     Float     @default(0)
+  // Total
+  totalAmount      Float     @default(0) // Sum of all costs
+  // Status
+  status           String    @default("pending") // pending, paid, overdue
+  paidDate         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   // Relations
   householdId String

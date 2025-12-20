@@ -1,10 +1,18 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Car, Bike, Motorbike } from 'lucide-react';
+import { ChevronDown, Car, Bike, Motorbike, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AddSquareIcon } from '../shared/AddSquareIcon';
 import type { ParkingSlot } from '../ParkingView';
+
+interface Member {
+  id: string;
+  name: string;
+  cccd: string;
+  householdId?: string | null;
+  household?: { unit: string; phone: string } | null;
+}
 
 interface ParkingSlotFormProps {
   slot: ParkingSlot | null;
@@ -24,17 +32,39 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
     phone: slot?.phone || '',
   });
 
+  const [members, setMembers] = useState<Member[]>([]);
+  const [isOwnerOpen, setIsOwnerOpen] = useState(false);
   const [isVehicleTypeOpen, setIsVehicleTypeOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const ownerRef = useRef<HTMLDivElement>(null);
   const vehicleTypeRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
+
+  // Fetch members on mount
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const res = await fetch('/api/members');
+        if (res.ok) {
+          const data = await res.json();
+          setMembers(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch members:', error);
+      }
+    };
+    fetchMembers();
+  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      if (ownerRef.current && !ownerRef.current.contains(event.target as Node)) {
+        setIsOwnerOpen(false);
+      }
       if (vehicleTypeRef.current && !vehicleTypeRef.current.contains(event.target as Node)) {
         setIsVehicleTypeOpen(false);
       }
@@ -46,6 +76,19 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleOwnerSelect = (member: Member) => {
+    setFormData(prev => ({
+      ...prev,
+      ownerName: member.name,
+      unit: member.household?.unit || prev.unit,
+      phone: member.household?.phone || prev.phone,
+    }));
+    setIsOwnerOpen(false);
+    if (errors.ownerName) {
+      setErrors(prev => ({ ...prev, ownerName: '' }));
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,53 +179,114 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
 
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">Slot Number *</label>
-              <input
-                type="text"
-                value={formData.slotNumber}
-                onChange={(e) => handleChange('slotNumber', e.target.value)}
-                className={`input-default text-sm ${errors.slotNumber ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                placeholder="e.g., P-A01"
-                required
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.slotNumber}
+                  onChange={(e) => handleChange('slotNumber', e.target.value)}
+                  className={`input-default text-sm pr-10 ${formData.slotNumber.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.slotNumber ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  placeholder="e.g., P-A01"
+                  required
+                />
+                {formData.slotNumber.trim().length > 0 && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                )}
+                {formData.slotNumber.trim().length === 0 && errors.slotNumber && (
+                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                )}
+              </div>
               {errors.slotNumber && <p className="text-xs text-red-500 mt-0.5">{errors.slotNumber}</p>}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-text-primary mb-2 block">Apartment Unit *</label>
-              <input
-                type="text"
-                value={formData.unit}
-                onChange={(e) => handleChange('unit', e.target.value)}
-                className={`input-default text-sm ${errors.unit ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                placeholder="e.g., A-101"
-                required
-              />
-              {errors.unit && <p className="text-xs text-red-500 mt-0.5">{errors.unit}</p>}
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-text-primary mb-2 block">Owner Name *</label>
-              <input
-                type="text"
-                value={formData.ownerName}
-                onChange={(e) => handleChange('ownerName', e.target.value)}
-                className={`input-default text-sm ${errors.ownerName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                placeholder="Enter owner name"
-                required
-              />
+              <label className="text-sm font-medium text-text-primary mb-2 block">Vehicle Owner (Resident) *</label>
+              <div className="relative" ref={ownerRef}>
+                <button
+                  type="button"
+                  className={`input-default text-sm flex items-center justify-between ${formData.ownerName ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.ownerName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  onClick={() => setIsOwnerOpen(!isOwnerOpen)}
+                >
+                  <span className={formData.ownerName ? 'text-text-primary' : 'text-text-secondary'}>
+                    {formData.ownerName || 'Select a resident'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {formData.ownerName && (
+                      <Check className="w-4 h-4 text-green-500" />
+                    )}
+                    <ChevronDown className={`size-4 text-text-secondary transition-transform ${isOwnerOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+                {isOwnerOpen && (
+                  <div className="absolute z-10 bg-bg-white border border-border-light rounded-lg shadow-lg w-full mt-1 max-h-[260px] overflow-y-auto scrollbar-hide">
+                    {members.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-text-secondary">No residents found</div>
+                    ) : (
+                      members.map(member => (
+                        <button
+                          key={member.id}
+                          type="button"
+                          className={`w-full px-4 py-3 text-left hover:bg-bg-hover transition-colors ${formData.ownerName === member.name ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'}`}
+                          onClick={() => handleOwnerSelect(member)}
+                        >
+                          <p className="leading-tight font-medium">{member.name}</p>
+                          <p className="text-xs text-text-secondary">
+                            {member.household?.unit ? `Unit ${member.household.unit}` : 'No unit assigned'} • CCCD: {member.cccd}
+                          </p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
               {errors.ownerName && <p className="text-xs text-red-500 mt-0.5">{errors.ownerName}</p>}
             </div>
 
             <div>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Apartment Unit *</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.unit}
+                  readOnly
+                  className={`input-default text-sm pr-10 bg-bg-hover cursor-not-allowed ${formData.unit.trim().length > 0 ? 'border-green-500' : errors.unit ? 'border-red-500' : ''}`}
+                  placeholder="Auto-filled from resident"
+                />
+                {formData.unit.trim().length > 0 && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                )}
+                {formData.unit.trim().length === 0 && errors.unit && (
+                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                )}
+              </div>
+              {errors.unit && <p className="text-xs text-red-500 mt-0.5">{errors.unit}</p>}
+            </div>
+
+            <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">Phone Number *</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                className={`input-default text-sm ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                placeholder="e.g., 555-0101"
-                required
-              />
+              <div className="relative">
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    handleChange('phone', value);
+                  }}
+                  className={`input-default text-sm pr-16 ${formData.phone.length >= 10 && formData.phone.length <= 11 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  placeholder="Auto-filled from resident"
+                  required
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <span className={`text-xs ${formData.phone.length >= 10 && formData.phone.length <= 11 ? 'text-green-500' : 'text-text-muted'}`}>
+                    {formData.phone.length}/10-11
+                  </span>
+                  {formData.phone.length >= 10 && formData.phone.length <= 11 && (
+                    <Check className="w-4 h-4 text-green-500" />
+                  )}
+                  {formData.phone.length > 0 && (formData.phone.length < 10 || formData.phone.length > 11) && (
+                    <X className="w-4 h-4 text-red-500" />
+                  )}
+                </div>
+              </div>
               {errors.phone && <p className="text-xs text-red-500 mt-0.5">{errors.phone}</p>}
             </div>
           </div>
@@ -232,27 +336,40 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
 
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">License Plate</label>
-              <input
-                type="text"
-                value={formData.licensePlate}
-                onChange={(e) => handleChange('licensePlate', e.target.value)}
-                className="input-default text-sm"
-                placeholder="e.g., ABC-1234"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.licensePlate}
+                  onChange={(e) => handleChange('licensePlate', e.target.value.toUpperCase())}
+                  className={`input-default text-sm pr-10 ${formData.licensePlate.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : ''}`}
+                  placeholder="e.g., ABC-1234"
+                />
+                {formData.licensePlate.trim().length > 0 && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                )}
+              </div>
             </div>
 
             <div>
               <label className="text-sm font-medium text-text-primary mb-2 block">Monthly Fee ($) *</label>
-              <input
-                type="number"
-                value={formData.monthlyFee}
-                onChange={(e) => handleChange('monthlyFee', e.target.value)}
-                className={`input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${errors.monthlyFee ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                placeholder="e.g., 50"
-                min="0"
-                step="0.01"
-                required
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  value={formData.monthlyFee}
+                  onChange={(e) => handleChange('monthlyFee', e.target.value)}
+                  className={`input-default text-sm pr-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${formData.monthlyFee && parseFloat(formData.monthlyFee) > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.monthlyFee ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  placeholder="e.g., 50"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+                {formData.monthlyFee && parseFloat(formData.monthlyFee) > 0 && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                )}
+                {formData.monthlyFee && parseFloat(formData.monthlyFee) <= 0 && (
+                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                )}
+              </div>
               {errors.monthlyFee && <p className="text-xs text-red-500 mt-0.5">{errors.monthlyFee}</p>}
             </div>
 
@@ -295,7 +412,14 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="btn-secondary"
+          >
+            Cancel
+          </button>
           <button
             type="submit"
             className="btn-primary flex items-center gap-2"
@@ -304,13 +428,6 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
               <AddSquareIcon className="relative size-5" />
             </div>
             {slot ? 'Update Slot' : 'Add Slot'}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="btn-secondary"
-          >
-            Cancel
           </button>
         </div>
       </form>

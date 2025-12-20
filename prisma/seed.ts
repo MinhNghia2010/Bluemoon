@@ -391,13 +391,18 @@ async function main() {
   )
   console.log('✅ Updated household balances')
 
-  // Create sample utility bills
+  // Create sample utility bills (new schema: all utility types in one bill)
   const utilityBills = await Promise.all([
     prisma.utilityBill.create({
       data: {
         householdId: households[0].id,
-        type: 'electricity',
-        amount: 85,
+        month: 'November 2025',
+        electricityUsage: 250,
+        electricityCost: 85,
+        waterUsage: 15,
+        waterCost: 35,
+        internetCost: 30,
+        totalAmount: 150,
         periodStart: new Date(now.getFullYear(), now.getMonth() - 1, 1),
         periodEnd: new Date(now.getFullYear(), now.getMonth(), 0),
         dueDate: new Date(now.getFullYear(), now.getMonth(), 15),
@@ -407,20 +412,14 @@ async function main() {
     }),
     prisma.utilityBill.create({
       data: {
-        householdId: households[0].id,
-        type: 'water',
-        amount: 35,
-        periodStart: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-        periodEnd: new Date(now.getFullYear(), now.getMonth(), 0),
-        dueDate: new Date(now.getFullYear(), now.getMonth(), 15),
-        status: 'pending'
-      }
-    }),
-    prisma.utilityBill.create({
-      data: {
         householdId: households[1].id,
-        type: 'electricity',
-        amount: 65,
+        month: 'November 2025',
+        electricityUsage: 180,
+        electricityCost: 65,
+        waterUsage: 12,
+        waterCost: 28,
+        internetCost: 30,
+        totalAmount: 123,
         periodStart: new Date(now.getFullYear(), now.getMonth() - 1, 1),
         periodEnd: new Date(now.getFullYear(), now.getMonth(), 0),
         dueDate: new Date(now.getFullYear(), now.getMonth(), 15),
@@ -430,8 +429,13 @@ async function main() {
     prisma.utilityBill.create({
       data: {
         householdId: households[2].id,
-        type: 'internet',
-        amount: 45,
+        month: 'December 2025',
+        electricityUsage: 200,
+        electricityCost: 72,
+        waterUsage: 10,
+        waterCost: 25,
+        internetCost: 45,
+        totalAmount: 142,
         periodStart: new Date(now.getFullYear(), now.getMonth(), 1),
         periodEnd: new Date(now.getFullYear(), now.getMonth() + 1, 0),
         dueDate: new Date(now.getFullYear(), now.getMonth() + 1, 5),

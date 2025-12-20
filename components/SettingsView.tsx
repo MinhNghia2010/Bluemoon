@@ -6,6 +6,7 @@ import { ApartmentInfoForm } from './settings/ApartmentInfoForm';
 import { ChangePasswordForm } from './settings/ChangePasswordForm';
 import { SystemPreferences } from './settings/SystemPreferences';
 import { SystemInformation } from './settings/SystemInformation';
+import { UserManagement } from './settings/UserManagement';
 
 export function SettingsView() {
   const [successMessage, setSuccessMessage] = useState('');
@@ -27,8 +28,7 @@ export function SettingsView() {
           successMessage={successMessage}
           errorMessage={errorMessage}
         />
-        <SystemPreferences />
-        <SystemInformation />
+        <UserManagement />
       </div>
     </div>
   );

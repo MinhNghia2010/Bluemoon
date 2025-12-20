@@ -120,7 +120,7 @@ export function UtilityBillList({ bills, onEdit, onMarkAsPaid }: UtilityBillList
             <div className="pt-[16px] border-t border-border-light">
               <div className="flex items-center justify-between">
                 <p className="text-text-secondary text-xs">Total Amount</p>
-                <p className="font-semibold text-[#5030e5] text-lg">${bill.totalCost.toFixed(2)}</p>
+                <p className="font-semibold text-[#5030e5] text-lg">${bill.totalAmount.toFixed(2)}</p>
               </div>
             </div>
 

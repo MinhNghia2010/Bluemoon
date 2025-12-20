@@ -42,7 +42,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
       />
       
       <div className="flex-1 overflow-auto scrollbar-hide">
-        <Header onLogout={onLogout} />
+        <Header onLogout={onLogout} onNavigate={setCurrentView} />
         
         <div className="p-[40px]">
           {currentView === 'households' && <HouseholdsView />}

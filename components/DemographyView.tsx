@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Search, Edit2, Trash2, Users, AlertTriangle, CalendarIcon, ChevronDown } from 'lucide-react'
+import { Search, Edit2, Trash2, Users, AlertTriangle, ChevronDown, Check, X } from 'lucide-react'
+import { PageHeader } from './shared/PageHeader'
 import { format } from 'date-fns'
 import {
   AlertDialog,
@@ -13,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog'
-import { Calendar } from '@/components/ui/calendar'
+import { DatePickerInput } from './shared/DatePickerInput'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { toast } from 'sonner'
 
@@ -148,19 +149,12 @@ export function DemographyView() {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-semibold text-text-primary">Demography</h1>
-          <p className="text-base text-text-secondary mt-1">View and search all residents in the building</p>
-        </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Add Person
-        </button>
-      </div>
+      <PageHeader
+        title="Demography"
+        description="View and search all residents in the building"
+        buttonLabel="Add Person"
+        onButtonClick={() => setShowForm(true)}
+      />
 
       {/* Search */}
       <div className="bg-bg-white rounded-2xl p-6 shadow-lg border border-border-light mb-6">
@@ -304,7 +298,6 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
     profilePic: '',
     householdId: ''
   })
-  const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -370,68 +363,72 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Full Name *</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, name: e.target.value }))
-                  if (errors.name) setErrors(prev => ({ ...prev, name: '' }))
-                }}
-                placeholder="Enter full name"
-                className={`input-default text-sm ${errors.name ? 'border-red-500' : ''}`}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, name: e.target.value }))
+                    if (errors.name) setErrors(prev => ({ ...prev, name: '' }))
+                  }}
+                  placeholder="Enter full name"
+                  className={`input-default text-sm pr-10 ${errors.name ? 'border-red-500' : formData.name.trim().length >= 2 ? 'border-green-500' : ''}`}
+                />
+                {formData.name.trim().length > 0 && (
+                  <div className={`absolute right-3 top-1/2 -translate-y-1/2 ${formData.name.trim().length >= 2 ? 'text-green-500' : 'text-red-500'}`}>
+                    {formData.name.trim().length >= 2 ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                  </div>
+                )}
+              </div>
               {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
+              {formData.name.trim().length > 0 && formData.name.trim().length < 2 && (
+                <p className="mt-1 text-sm text-red-500">Name must be at least 2 characters</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">Date of Birth *</label>
-              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className={`input-default text-sm flex items-center justify-between w-full ${errors.dateOfBirth ? 'border-red-500' : ''}`}
-                  >
-                    <span className={formData.dateOfBirth ? 'text-text-primary' : 'text-text-secondary'}>
-                      {formData.dateOfBirth 
-                        ? format(new Date(formData.dateOfBirth), 'MMMM d, yyyy')
-                        : 'Select date of birth'
-                      }
-                    </span>
-                    <CalendarIcon className="w-4 h-4 text-text-secondary" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.dateOfBirth ? new Date(formData.dateOfBirth) : undefined}
-                    onSelect={(date) => {
-                      if (date) {
-                        setFormData(prev => ({ ...prev, dateOfBirth: format(date, 'yyyy-MM-dd') }))
-                        if (errors.dateOfBirth) setErrors(prev => ({ ...prev, dateOfBirth: '' }))
-                      }
-                      setDatePickerOpen(false)
-                    }}
-                    disabled={(date) => date > new Date()}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePickerInput
+                value={formData.dateOfBirth}
+                onChange={(date) => {
+                  if (date) {
+                    setFormData(prev => ({ ...prev, dateOfBirth: format(date, 'yyyy-MM-dd') }))
+                    if (errors.dateOfBirth) setErrors(prev => ({ ...prev, dateOfBirth: '' }))
+                  }
+                }}
+                disabled={(date) => date > new Date()}
+                error={!!errors.dateOfBirth}
+                placeholder="dd/mm/yyyy"
+              />
               {errors.dateOfBirth && <p className="mt-1 text-sm text-red-500">{errors.dateOfBirth}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">CCCD (Căn cước công dân) *</label>
-              <input
-                type="text"
-                value={formData.cccd}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, cccd: e.target.value }))
-                  if (errors.cccd) setErrors(prev => ({ ...prev, cccd: '' }))
-                }}
-                placeholder="12-digit identification number"
-                className={`input-default text-sm ${errors.cccd ? 'border-red-500' : ''}`}
-              />
-              <p className="mt-1 text-xs text-text-secondary">12-digit identification number</p>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.cccd}
+                  onChange={(e) => {
+                    // Only allow digits, max 12 characters
+                    const value = e.target.value.replace(/\D/g, '')
+                    if (value.length <= 12) {
+                      setFormData(prev => ({ ...prev, cccd: value }))
+                      if (errors.cccd) setErrors(prev => ({ ...prev, cccd: '' }))
+                    }
+                  }}
+                  maxLength={12}
+                  placeholder="12-digit identification number"
+                  className={`input-default text-sm pr-16 font-mono ${errors.cccd ? 'border-red-500' : formData.cccd.length === 12 ? 'border-green-500' : formData.cccd.length > 0 ? 'border-red-500' : ''}`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <span className={`text-xs ${formData.cccd.length === 12 ? 'text-green-500' : 'text-text-muted'}`}>
+                    {formData.cccd.length}/12
+                  </span>
+                  {formData.cccd.length === 12 && <Check className="w-4 h-4 text-green-500" />}
+                  {formData.cccd.length > 0 && formData.cccd.length !== 12 && <X className="w-4 h-4 text-red-500" />}
+                </div>
+              </div>
               {errors.cccd && <p className="mt-1 text-sm text-red-500">{errors.cccd}</p>}
             </div>
 
@@ -522,7 +519,7 @@ function MemberForm({ member, households, onSave, onCancel }: MemberFormProps) {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 justify-end">
           <button type="button" onClick={onCancel} className="btn-secondary">
             Cancel
           </button>

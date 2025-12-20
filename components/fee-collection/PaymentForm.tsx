@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Plus, X, Users, CalendarIcon } from 'lucide-react';
+import { ChevronDown, Plus, X, Users, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { AddSquareIcon } from '../shared/AddSquareIcon';
-import { Calendar } from '@/components/ui/calendar';
+import { DatePickerInput } from '../shared/DatePickerInput';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { householdsApi, feeCategoriesApi } from '@/lib/api';
 import { toast } from 'sonner';
@@ -357,13 +357,18 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
                   <div className="relative" ref={householdRef}>
                     <button
                       type="button"
-                      className="input-default text-sm flex items-center justify-between"
+                      className={`input-default text-sm flex items-center justify-between ${formData.householdId ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : ''}`}
                       onClick={() => setIsHouseholdOpen(!isHouseholdOpen)}
                     >
                       <span className={formData.householdId ? 'text-text-primary' : 'text-text-secondary'}>
                         {getHouseholdLabel(formData.householdId)}
                       </span>
-                      <ChevronDown className={`size-4 text-text-secondary transition-transform ${isHouseholdOpen ? 'rotate-180' : ''}`} />
+                      <div className="flex items-center gap-2">
+                        {formData.householdId && (
+                          <Check className="w-4 h-4 text-green-500" />
+                        )}
+                        <ChevronDown className={`size-4 text-text-secondary transition-transform ${isHouseholdOpen ? 'rotate-180' : ''}`} />
+                      </div>
                     </button>
                     {isHouseholdOpen && (
                       <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 max-h-[260px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -391,13 +396,18 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
                   <div className="relative" ref={categoryRef}>
                     <button
                       type="button"
-                      className="input-default text-sm flex items-center justify-between"
+                      className={`input-default text-sm flex items-center justify-between ${formData.feeCategoryId ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : ''}`}
                       onClick={() => setIsCategoryOpen(!isCategoryOpen)}
                     >
                       <span className={formData.feeCategoryId ? 'text-text-primary' : 'text-text-secondary'}>
                         {formData.feeCategoryId ? getCategoryLabel(formData.feeCategoryId) : 'Select a category'}
                       </span>
-                      <ChevronDown className={`size-4 text-text-secondary transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                      <div className="flex items-center gap-2">
+                        {formData.feeCategoryId && (
+                          <Check className="w-4 h-4 text-green-500" />
+                        )}
+                        <ChevronDown className={`size-4 text-text-secondary transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                      </div>
                     </button>
                     {isCategoryOpen && (
                       <div className="absolute z-10 bg-bg-white border border-border-default rounded-lg shadow-lg w-full mt-1 max-h-[260px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -422,44 +432,34 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
 
                 <div>
                   <label className="text-sm font-medium text-text-primary mb-2 block">Amount ($) *</label>
-                  <input
-                    type="number"
-                    value={formData.amount || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
-                    min="0"
-                    step="1"
-                    placeholder="0"
-                    className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  />
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.amount || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                      min="0"
+                      step="1"
+                      placeholder="0"
+                      className={`input-default text-sm pr-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${formData.amount > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : ''}`}
+                    />
+                    {formData.amount > 0 && (
+                      <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                    )}
+                  </div>
                   <p className="text-xs text-text-secondary mt-1">{formatCurrency(formData.amount)}</p>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-text-primary mb-2 block">Due Date *</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="input-default text-sm flex items-center justify-between"
-                      >
-                        <span className="text-text-primary">
-                          {formData.dueDate ? format(new Date(formData.dueDate), 'PPP') : 'Pick a date'}
-                        </span>
-                        <CalendarIcon className="size-4 text-text-secondary" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={formData.dueDate ? new Date(formData.dueDate) : undefined}
-                        onSelect={(date) => setFormData(prev => ({ 
-                          ...prev, 
-                          dueDate: date ? format(date, 'yyyy-MM-dd') : prev.dueDate 
-                        }))}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <DatePickerInput
+                    value={formData.dueDate}
+                    onChange={(date) => setFormData(prev => ({ 
+                      ...prev, 
+                      dueDate: date ? format(date, 'yyyy-MM-dd') : prev.dueDate 
+                    }))}
+                    placeholder="dd/mm/yyyy"
+                    showValidation={true}
+                  />
                 </div>
               </div>
 
@@ -534,10 +534,16 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
                   <label className="text-sm font-medium text-text-primary mb-2 block">Notes</label>
                   <textarea
                     value={formData.notes}
-                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, notes: e.target.value }))
+                      // Auto-resize
+                      e.target.style.height = 'auto'
+                      e.target.style.height = e.target.scrollHeight + 'px'
+                    }}
                     placeholder="Optional notes..."
-                    rows={6}
-                    className="input-default text-sm resize-none"
+                    rows={3}
+                    className="input-default text-sm resize-none overflow-hidden"
+                    style={{ minHeight: '80px' }}
                   />
                 </div>
               </div>
@@ -696,30 +702,14 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
                 <div className="grid grid-cols-1 gap-4">
                   <div className="flex flex-col gap-2">
                     <span className="text-sm font-medium text-text-primary">Due Date *</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className="input-default text-sm flex items-center justify-between"
-                        >
-                          <span className="text-text-primary">
-                            {bulkData.dueDate ? format(new Date(bulkData.dueDate), 'PPP') : 'Pick a date'}
-                          </span>
-                          <CalendarIcon className="size-4 text-text-secondary" />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={bulkData.dueDate ? new Date(bulkData.dueDate) : undefined}
-                          onSelect={(date) => setBulkData(prev => ({ 
-                            ...prev, 
-                            dueDate: date ? format(date, 'yyyy-MM-dd') : prev.dueDate 
-                          }))}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <DatePickerInput
+                      value={bulkData.dueDate}
+                      onChange={(date) => setBulkData(prev => ({ 
+                        ...prev, 
+                        dueDate: date ? format(date, 'yyyy-MM-dd') : prev.dueDate 
+                      }))}
+                      placeholder="dd/mm/yyyy"
+                    />
                   </div>
 
                   <div className="flex flex-col gap-2">

@@ -182,3 +182,24 @@ export const settingsApi = {
     apiCall<void>('/settings', { method: 'PUT', body: data })
 }
 
+// Users API
+export const usersApi = {
+  getAll: () =>
+    apiCall<any[]>('/users'),
+
+  getById: (id: string) =>
+    apiCall<any>(`/users/${id}`),
+
+  create: (data: { username: string; password: string; name: string; email: string; role?: string }) =>
+    apiCall<any>('/users', { method: 'POST', body: data }),
+
+  update: (id: string, data: any) =>
+    apiCall<any>(`/users/${id}`, { method: 'PUT', body: data }),
+
+  delete: (id: string) =>
+    apiCall<void>(`/users/${id}`, { method: 'DELETE' }),
+
+  changePassword: (data: { userId: string; currentPassword: string; newPassword: string }) =>
+    apiCall<{ message: string }>('/users/change-password', { method: 'POST', body: data })
+}
+

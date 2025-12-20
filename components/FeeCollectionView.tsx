@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { AddSquareIcon } from './shared/AddSquareIcon';
+import { Plus } from 'lucide-react';
 import { SummaryCard } from './shared/SummaryCard';
 import { HouseholdPaymentCard } from './fee-collection/HouseholdPaymentCard';
 import { PaymentFilters } from './fee-collection/PaymentFilters';
@@ -244,9 +244,7 @@ export function FeeCollectionView() {
             onClick={() => setViewMode('add')}
             className="flex items-center gap-[8px] bg-[#5030e5] text-white px-[20px] py-[12px] rounded-[6px] hover:bg-[#4024c4] transition-colors"
           >
-            <div className="relative size-[20px]">
-              <AddSquareIcon className="relative size-[20px]" />
-            </div>
+            <Plus className="w-5 h-5" />
             <span className="font-medium text-[16px]">Record Payment</span>
           </button>
         </div>

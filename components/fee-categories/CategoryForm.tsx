@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { AddSquareIcon } from '../shared/AddSquareIcon';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FeeCategory {
@@ -193,29 +193,45 @@ export function CategoryForm({ category, onSave, onCancel }: CategoryFormProps) 
 
           <div>
             <label className="text-sm font-medium text-text-primary mb-2 block">Category Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="e.g., Maintenance Fee"
-              className="input-default text-sm"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="e.g., Maintenance Fee"
+                className={`input-default text-sm pr-10 ${formData.name.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              />
+              {formData.name.trim().length > 0 && (
+                <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+              )}
+              {formData.name.trim().length === 0 && errors.name && (
+                <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+              )}
+            </div>
             {errors.name && <p className="text-xs text-error mt-0.5">{errors.name}</p>}
           </div>
 
           <div>
             <label className="text-sm font-medium text-text-primary mb-2 block">Amount ($)</label>
-            <input
-              type="number"
-              value={formData.amount}
-              onChange={(e) => handleInputChange('amount', e.target.value)}
-              onKeyDown={handleKeyDown}
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              className="input-default text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            />
+            <div className="relative">
+              <input
+                type="number"
+                value={formData.amount}
+                onChange={(e) => handleInputChange('amount', e.target.value)}
+                onKeyDown={handleKeyDown}
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                className={`input-default text-sm pr-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${formData.amount && parseFloat(formData.amount) > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.amount ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              />
+              {formData.amount && parseFloat(formData.amount) > 0 && (
+                <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+              )}
+              {formData.amount && parseFloat(formData.amount) <= 0 && (
+                <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+              )}
+            </div>
             {errors.amount && <p className="text-xs text-error mt-0.5">{errors.amount}</p>}
           </div>
 
@@ -256,13 +272,21 @@ export function CategoryForm({ category, onSave, onCancel }: CategoryFormProps) 
 
           <div>
             <label className="text-sm font-medium text-text-primary mb-2 block">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Enter a detailed description"
-              rows={5}
-              className="input-default text-sm resize-none"
-            />
+            <div className="relative">
+              <textarea
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Enter a detailed description"
+                rows={5}
+                className={`input-default text-sm resize-none pr-10 ${formData.description.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.description ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+              />
+              {formData.description.trim().length > 0 && (
+                <Check className="absolute right-3 top-3 w-4 h-4 text-green-500" />
+              )}
+              {formData.description.trim().length === 0 && errors.description && (
+                <X className="absolute right-3 top-3 w-4 h-4 text-red-500" />
+              )}
+            </div>
             {errors.description && <p className="text-xs text-error mt-0.5">{errors.description}</p>}
           </div>
 
@@ -282,7 +306,13 @@ export function CategoryForm({ category, onSave, onCancel }: CategoryFormProps) 
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 justify-end">
+        <button
+          onClick={onCancel}
+          className="btn-secondary"
+        >
+          Cancel
+        </button>
         <button
           onClick={handleSubmit}
           className="btn-primary flex items-center gap-2"
@@ -291,12 +321,6 @@ export function CategoryForm({ category, onSave, onCancel }: CategoryFormProps) 
             <AddSquareIcon className="relative size-5" />
           </div>
           {isEditMode ? 'Update Category' : 'Add Category'}
-        </button>
-        <button
-          onClick={onCancel}
-          className="btn-secondary"
-        >
-          Cancel
         </button>
       </div>
     </div>

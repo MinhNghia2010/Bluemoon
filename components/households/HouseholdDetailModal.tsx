@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Trash2, AlertTriangle, Plus, UserMinus, Edit2, Building2, CalendarIcon } from 'lucide-react';
+import { Trash2, AlertTriangle, Plus, UserMinus, Edit2, Building2, CalendarIcon, Maximize2, Layers, Phone, Mail, Check, X } from 'lucide-react';
 import { Modal } from '../shared/Modal';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DatePickerInput } from '../shared/DatePickerInput';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,23 +57,32 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [members, setMembers] = useState<HouseholdMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<HouseholdMember | null>(null);
   const [showRemoveMemberAlert, setShowRemoveMemberAlert] = useState(false);
   
   useEffect(() => {
     if (household?.id) {
       fetchMembers();
+    } else {
+      setMembers([]);
     }
   }, [household?.id]);
 
   const fetchMembers = async () => {
     if (!household) return;
+    setMembersLoading(true);
     try {
-      const res = await fetch(`/api/members?householdId=${household.id}`);
+      const res = await fetch(`/api/members?householdId=${household.id}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       const data = await res.json();
       setMembers(data);
     } catch (error) {
       console.error('Error fetching members:', error);
+    } finally {
+      setMembersLoading(false);
     }
   };
 
@@ -120,13 +128,18 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
     <Modal isOpen={!!household} onClose={onClose} maxWidth="800px">
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-start justify-between mb-6 shrink-0">
+        <div className="flex items-center justify-between mb-6 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-brand-primary/10 flex items-center justify-center">
               <Building2 className="w-6 h-6 text-brand-primary" />
             </div>
             <div>
-              <h3 className="font-semibold text-text-primary text-xl">Room {household.unit}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-text-primary text-xl">Room {household.unit}</h3>
+                <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${statusColor.bg} ${statusColor.text}`}>
+                  {statusColor.label}
+                </span>
+              </div>
               <p className="text-text-secondary text-sm">{household.ownerName}</p>
             </div>
           </div>
@@ -139,44 +152,73 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
           </button>
         </div>
 
-        {/* Info Grid */}
-        <div className="grid grid-cols-4 gap-3 mb-6 shrink-0">
-          <div className="bg-bg-hover rounded-xl p-4 text-center">
-            <p className="text-xs text-text-secondary mb-2">Area</p>
-            <p className="text-xl font-bold text-brand-primary">
-              {household.area ? `${household.area}` : '-'}
-            </p>
-            {household.area && <p className="text-xs text-text-secondary">m²</p>}
+        {/* Info Grid - Icon next to stacked title/value, Golden Ratio: 13px → 21px */}
+        <div className="grid grid-cols-4 gap-3 mb-4 shrink-0">
+          <div className="bg-bg-hover rounded-xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center shrink-0">
+              <Maximize2 className="w-5 h-5 text-brand-primary" />
+            </div>
+            <div>
+              <p className="text-[13px] text-text-secondary">Area</p>
+              <p className="text-[21px] font-bold text-brand-primary leading-tight">
+                {household.area ? `${household.area} m²` : '-'}
+              </p>
+            </div>
           </div>
-          <div className="bg-bg-hover rounded-xl p-4 text-center">
-            <p className="text-xs text-text-secondary mb-2">Floor</p>
-            <p className="text-xl font-bold text-brand-primary">
-              {household.floor || '-'}
-            </p>
+          <div className="bg-bg-hover rounded-xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center shrink-0">
+              <Layers className="w-5 h-5 text-brand-primary" />
+            </div>
+            <div>
+              <p className="text-[13px] text-text-secondary">Floor</p>
+              <p className="text-[21px] font-bold text-brand-primary leading-tight">
+                {household.floor || '-'}
+              </p>
+            </div>
           </div>
-          <div className="bg-bg-hover rounded-xl p-4 text-center">
-            <p className="text-xs text-text-secondary mb-2">Status</p>
-            <span className={`inline-block px-3 py-1.5 rounded-lg text-xs font-semibold ${statusColor.bg} ${statusColor.text}`}>
-              {statusColor.label}
-            </span>
+          <div className="bg-bg-hover rounded-xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center shrink-0">
+              <CalendarIcon className="w-5 h-5 text-brand-primary" />
+            </div>
+            <div>
+              <p className="text-[13px] text-text-secondary">Move-in</p>
+              <p className="text-[18px] font-bold text-brand-primary leading-tight">
+                {household.moveInDate ? format(new Date(household.moveInDate), 'dd/MM/yy') : '-'}
+              </p>
+            </div>
           </div>
-          <div className="bg-bg-hover rounded-xl p-4 text-center">
-            <p className="text-xs text-text-secondary mb-2">Move-in Date</p>
-            <p className="text-base font-bold text-brand-primary">
-              {household.moveInDate ? format(new Date(household.moveInDate), 'MMM d, yyyy') : '-'}
-            </p>
+          <div className="bg-bg-hover rounded-xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5 text-brand-primary" />
+            </div>
+            <div>
+              <p className="text-[13px] text-text-secondary">Residents</p>
+              <p className="text-[21px] font-bold text-brand-primary leading-tight">
+                {household.residents || members.length || 0}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Contact Info */}
-        <div className="grid grid-cols-2 gap-4 mb-6 shrink-0">
-          <div className="bg-bg-hover rounded-xl p-4">
-            <p className="text-xs text-text-secondary mb-1">Phone</p>
-            <p className="text-sm font-medium text-text-primary">{household.phone || '-'}</p>
+        {/* Contact Info Row */}
+        <div className="grid grid-cols-2 gap-3 mb-6 shrink-0">
+          <div className="bg-bg-hover rounded-xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center shrink-0">
+              <Phone className="w-5 h-5 text-brand-primary" />
+            </div>
+            <div>
+              <p className="text-[13px] text-text-secondary">Phone</p>
+              <p className="text-[18px] font-semibold text-text-primary leading-tight">{household.phone || '-'}</p>
+            </div>
           </div>
-          <div className="bg-bg-hover rounded-xl p-4">
-            <p className="text-xs text-text-secondary mb-1">Email</p>
-            <p className="text-sm font-medium text-text-primary">{household.email || '-'}</p>
+          <div className="bg-bg-hover rounded-xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-brand-primary/10 flex items-center justify-center shrink-0">
+              <Mail className="w-5 h-5 text-brand-primary" />
+            </div>
+            <div>
+              <p className="text-[13px] text-text-secondary">Email</p>
+              <p className="text-[18px] font-semibold text-text-primary leading-tight">{household.email || '-'}</p>
+            </div>
           </div>
         </div>
 
@@ -198,7 +240,12 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
             </button>
           </div>
 
-          {members.length === 0 ? (
+          {membersLoading ? (
+            <div className="text-center py-6 h-[180px] flex flex-col items-center justify-center">
+              <div className="w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p className="text-text-secondary text-sm">Loading members...</p>
+            </div>
+          ) : members.length === 0 ? (
             <div className="text-center py-6 h-[180px] flex flex-col items-center justify-center">
               <div className="w-16 h-16 mb-3 rounded-full bg-bg-hover flex items-center justify-center">
                 <UserMinus className="w-8 h-8 text-text-secondary" />
@@ -413,61 +460,72 @@ function AddMemberModal({ isOpen, householdId, householdUnit, onClose, onSuccess
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">Full Name *</label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => {
-              setFormData(prev => ({ ...prev, name: e.target.value }));
-              if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
-            }}
-            placeholder="Enter full name"
-            className={`input-default text-sm ${errors.name ? 'border-red-500' : ''}`}
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, name: e.target.value }));
+                if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+              }}
+              placeholder="Enter full name"
+              className={`input-default text-sm pr-10 ${formData.name.trim().length >= 2 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+            />
+            {formData.name.trim().length >= 2 && (
+              <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+            )}
+            {formData.name.trim().length > 0 && formData.name.trim().length < 2 && (
+              <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+            )}
+          </div>
           {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">Date of Birth *</label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={`input-default text-sm flex items-center justify-between ${errors.dateOfBirth ? 'border-red-500' : ''}`}
-              >
-                <span className={formData.dateOfBirth ? 'text-text-primary' : 'text-text-secondary'}>
-                  {formData.dateOfBirth ? format(formData.dateOfBirth, 'PPP') : 'Select date of birth'}
-                </span>
-                <CalendarIcon className="size-4 text-text-secondary" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="start">
-              <Calendar
-                mode="single"
-                selected={formData.dateOfBirth}
-                onSelect={(date) => {
-                  setFormData(prev => ({ ...prev, dateOfBirth: date }));
-                  if (errors.dateOfBirth) setErrors(prev => ({ ...prev, dateOfBirth: '' }));
-                }}
-                disabled={(date) => date > new Date()}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <DatePickerInput
+            value={formData.dateOfBirth}
+            onChange={(date) => {
+              setFormData(prev => ({ ...prev, dateOfBirth: date }));
+              if (errors.dateOfBirth) setErrors(prev => ({ ...prev, dateOfBirth: '' }));
+            }}
+            disabled={(date) => date > new Date()}
+            error={!!errors.dateOfBirth}
+            placeholder="dd/mm/yyyy"
+            showValidation={true}
+          />
           {errors.dateOfBirth && <p className="mt-1 text-sm text-red-500">{errors.dateOfBirth}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">CCCD *</label>
-          <input
-            type="text"
-            value={formData.cccd}
-            onChange={(e) => {
-              setFormData(prev => ({ ...prev, cccd: e.target.value }));
-              if (errors.cccd) setErrors(prev => ({ ...prev, cccd: '' }));
-            }}
-            placeholder="12-digit identification number"
-            className={`input-default text-sm ${errors.cccd ? 'border-red-500' : ''}`}
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={formData.cccd}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^0-9]/g, '');
+                if (value.length <= 12) {
+                  setFormData(prev => ({ ...prev, cccd: value }));
+                  if (errors.cccd) setErrors(prev => ({ ...prev, cccd: '' }));
+                }
+              }}
+              maxLength={12}
+              placeholder="12-digit identification number"
+              className={`input-default text-sm pr-16 ${formData.cccd.length === 12 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.cccd ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <span className={`text-xs ${formData.cccd.length === 12 ? 'text-green-500' : 'text-text-muted'}`}>
+                {formData.cccd.length}/12
+              </span>
+              {formData.cccd.length === 12 && (
+                <Check className="w-4 h-4 text-green-500" />
+              )}
+              {formData.cccd.length > 0 && formData.cccd.length !== 12 && (
+                <X className="w-4 h-4 text-red-500" />
+              )}
+            </div>
+          </div>
           {errors.cccd && <p className="mt-1 text-sm text-red-500">{errors.cccd}</p>}
         </div>
 
