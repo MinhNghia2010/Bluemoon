@@ -48,12 +48,11 @@ export async function GET(request: NextRequest) {
         where: {
           OR: [
             { slotNumber: { contains: query, mode: 'insensitive' } },
-            { ownerName: { contains: query, mode: 'insensitive' } },
-            { vehiclePlate: { contains: query, mode: 'insensitive' } }
+            { licensePlate: { contains: query, mode: 'insensitive' } }
           ]
         },
         take: 5,
-        select: { id: true, slotNumber: true, ownerName: true, vehiclePlate: true }
+        select: { id: true, slotNumber: true, licensePlate: true, type: true, household: { select: { unit: true, ownerName: true } } }
       })
     ])
 
@@ -77,7 +76,7 @@ export async function GET(request: NextRequest) {
         type: 'parking' as const,
         id: p.id,
         title: `Slot ${p.slotNumber}`,
-        subtitle: `${p.ownerName || 'No owner'} • ${p.vehiclePlate || 'No plate'}`,
+        subtitle: `${p.household?.ownerName || 'No owner'} • ${p.licensePlate || 'No plate'}`,
         view: 'parking' as const
       }))
     ]

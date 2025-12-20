@@ -4,8 +4,6 @@ import { useState } from 'react';
 import { PageHeader } from './shared/PageHeader';
 import { ApartmentInfoForm } from './settings/ApartmentInfoForm';
 import { ChangePasswordForm } from './settings/ChangePasswordForm';
-import { SystemPreferences } from './settings/SystemPreferences';
-import { SystemInformation } from './settings/SystemInformation';
 import { UserManagement } from './settings/UserManagement';
 
 export function SettingsView() {
