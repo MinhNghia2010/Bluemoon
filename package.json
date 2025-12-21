@@ -6,6 +6,7 @@
     "dev": "next dev",
     "scan": "next dev & npx react-scan@latest localhost:3000",
     "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
     "db:migrate": "npx prisma migrate dev",
