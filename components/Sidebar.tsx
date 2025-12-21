@@ -37,7 +37,7 @@ export function Sidebar({ currentView, onViewChange, isCollapsed, onToggle }: Si
         {/* Logo and Toggle */}
         <div className="flex items-center justify-between mb-[60px]">
           <div className={`flex items-center gap-[12px] ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'} transition-all duration-300`}>
-            <img src="/images/32ca64d17b2402668538618763cc0b2a820003ec.png" alt="BlueMoon Logo" className="size-[32px]" />
+            <img src="\images\Logo.png" alt="BlueMoon Logo" className="size-8" />
             <div>
               <p className="font-semibold text-text-primary text-[20px]">BlueMoon</p>
             </div>
@@ -56,7 +56,7 @@ export function Sidebar({ currentView, onViewChange, isCollapsed, onToggle }: Si
         {/* Collapsed Logo */}
         {isCollapsed && (
           <div className="flex flex-col items-center mb-[40px]">
-            <img src="/images/32ca64d17b2402668538618763cc0b2a820003ec.png" alt="BlueMoon Logo" className="size-[40px] mb-[20px]" />
+            <img src="\images\Logo.png" alt="BlueMoon Logo" className="size-[40px] mb-[20px]" />
             <button 
               onClick={onToggle}
               className="text-text-secondary hover:text-text-primary transition-colors p-[4px]"
