@@ -3,125 +3,112 @@ import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
+// Helper to safely convert BigInt to Number
+function toNum(value: unknown): number {
+  if (value === null || value === undefined) return 0
+  if (typeof value === 'bigint') return Number(value)
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') return parseFloat(value) || 0
+  return 0
+}
+
 export async function GET() {
   try {
-    // Parking capacity constants
     const MAX_PARKING_SLOTS = 500
     const MAX_PARKING_HOUSEHOLDS = 100
 
-    // Use Prisma queries instead of raw SQL for better Vercel compatibility
-    const [
-      // Counts
-      totalHouseholds,
-      activeHouseholds,
-      totalResidents,
-      totalPayments,
-      pendingPayments,
-      collectedPayments,
-      overduePayments,
-      totalParkingSlots,
-      totalUtilityBills,
-      pendingUtilityBills,
-      paidUtilityBills,
-      overdueUtilityBills,
-      // Aggregates
-      paymentAggregates,
-      utilityAggregates,
-      parkingAggregates,
-      // Recent data
-      recentPayments,
-      recentUtilities,
-      categoryDistribution
-    ] = await Promise.all([
-      // Counts using Prisma
-      prisma.household.count(),
-      prisma.household.count({ where: { status: 'active' } }),
-      prisma.householdMember.count(),
-      prisma.payment.count(),
-      prisma.payment.count({ where: { status: 'pending' } }),
-      prisma.payment.count({ where: { status: 'collected' } }),
-      prisma.payment.count({ where: { status: 'overdue' } }),
-      prisma.parkingSlot.count(),
-      prisma.utilityBill.count(),
-      prisma.utilityBill.count({ where: { status: 'pending' } }),
-      prisma.utilityBill.count({ where: { status: 'paid' } }),
-      prisma.utilityBill.count({ where: { status: 'overdue' } }),
-      // Payment aggregates
-      prisma.payment.groupBy({
-        by: ['status'],
-        _sum: { amount: true }
-      }),
-      // Utility aggregates
-      prisma.utilityBill.aggregate({
-        _sum: {
-          totalAmount: true,
-          electricityCost: true,
-          waterCost: true,
-          internetCost: true
-        }
-      }),
-      // Parking aggregates
-      prisma.parkingSlot.aggregate({
-        _sum: { monthlyFee: true },
-        _count: { _all: true }
-      }),
-      // Monthly data (last 6 months)
+    // Single optimized raw SQL query for ALL counts and sums
+    const [mainStats, parkingStats, recentPayments, recentUtilities, categoryDistribution] = await Promise.all([
+      // Main statistics - single query for everything
+      prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(`
+        SELECT 
+          (SELECT COUNT(*)::int FROM "Household") as total_households,
+          (SELECT COUNT(*)::int FROM "Household" WHERE status = 'active') as active_households,
+          (SELECT COUNT(*)::int FROM "HouseholdMember") as total_residents,
+          (SELECT COUNT(*)::int FROM "Payment") as total_payments,
+          (SELECT COUNT(*)::int FROM "Payment" WHERE status = 'pending') as pending_payments,
+          (SELECT COUNT(*)::int FROM "Payment" WHERE status = 'collected') as collected_payments,
+          (SELECT COUNT(*)::int FROM "Payment" WHERE status = 'overdue') as overdue_payments,
+          (SELECT COALESCE(SUM(amount), 0)::float FROM "Payment" WHERE status = 'collected') as payments_collected_sum,
+          (SELECT COALESCE(SUM(amount), 0)::float FROM "Payment" WHERE status = 'pending') as payments_pending_sum,
+          (SELECT COALESCE(SUM(amount), 0)::float FROM "Payment" WHERE status = 'overdue') as payments_overdue_sum,
+          (SELECT COUNT(*)::int FROM "ParkingSlot") as total_parking,
+          (SELECT COUNT(*)::int FROM "UtilityBill") as total_utilities,
+          (SELECT COUNT(*)::int FROM "UtilityBill" WHERE status = 'pending') as pending_utilities,
+          (SELECT COUNT(*)::int FROM "UtilityBill" WHERE status = 'paid') as paid_utilities,
+          (SELECT COUNT(*)::int FROM "UtilityBill" WHERE status = 'overdue') as overdue_utilities,
+          (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "UtilityBill" WHERE status = 'paid') as utilities_paid_sum,
+          (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "UtilityBill" WHERE status = 'pending') as utilities_pending_sum,
+          (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "UtilityBill" WHERE status = 'overdue') as utilities_overdue_sum,
+          (SELECT COALESCE(SUM("electricityCost"), 0)::float FROM "UtilityBill") as electricity_sum,
+          (SELECT COALESCE(SUM("waterCost"), 0)::float FROM "UtilityBill") as water_sum,
+          (SELECT COALESCE(SUM("internetCost"), 0)::float FROM "UtilityBill") as internet_sum
+      `),
+      
+      // Parking statistics - single query
+      prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(`
+        SELECT 
+          COALESCE(SUM("monthlyFee"), 0)::float as monthly_fee_sum,
+          COUNT(DISTINCT "householdId")::int as households_count,
+          SUM(CASE WHEN type = 'car' THEN 1 ELSE 0 END)::int as car_count,
+          SUM(CASE WHEN type = 'motorcycle' THEN 1 ELSE 0 END)::int as motorcycle_count,
+          SUM(CASE WHEN type = 'bicycle' THEN 1 ELSE 0 END)::int as bicycle_count
+        FROM "ParkingSlot"
+      `),
+      
+      // Recent payments (last 6 months)
       prisma.payment.findMany({
         where: { dueDate: { gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000) } },
         select: { amount: true, status: true, dueDate: true }
       }),
+      
+      // Recent utilities (last 6 months)
       prisma.utilityBill.findMany({
         where: { dueDate: { gte: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000) } },
         select: { totalAmount: true, status: true, dueDate: true }
       }),
+      
       // Category distribution
       prisma.feeCategory.findMany({
         select: { name: true, amount: true, _count: { select: { payments: true } } }
       })
     ])
 
-    // Get additional parking data
-    const [parkingHouseholdsCount, parkingByType] = await Promise.all([
-      prisma.parkingSlot.groupBy({
-        by: ['householdId'],
-        where: { householdId: { not: null } }
-      }).then(result => result.length),
-      prisma.parkingSlot.groupBy({
-        by: ['type'],
-        _count: { _all: true }
-      })
-    ])
+    // Extract main stats (safely handle types)
+    const s = mainStats[0] || {}
+    const totalHouseholds = toNum(s.total_households)
+    const activeHouseholds = toNum(s.active_households)
+    const totalResidents = toNum(s.total_residents)
+    const totalPayments = toNum(s.total_payments)
+    const pendingPayments = toNum(s.pending_payments)
+    const collectedPayments = toNum(s.collected_payments)
+    const overduePayments = toNum(s.overdue_payments)
+    const paymentsCollectedSum = toNum(s.payments_collected_sum)
+    const paymentsPendingSum = toNum(s.payments_pending_sum)
+    const paymentsOverdueSum = toNum(s.payments_overdue_sum)
+    const totalParkingSlots = toNum(s.total_parking)
+    const totalUtilityBills = toNum(s.total_utilities)
+    const pendingUtilityBills = toNum(s.pending_utilities)
+    const paidUtilityBills = toNum(s.paid_utilities)
+    const overdueUtilityBills = toNum(s.overdue_utilities)
+    const utilitiesPaidSum = toNum(s.utilities_paid_sum)
+    const utilitiesPendingSum = toNum(s.utilities_pending_sum)
+    const utilitiesOverdueSum = toNum(s.utilities_overdue_sum)
+    const electricitySum = toNum(s.electricity_sum)
+    const waterSum = toNum(s.water_sum)
+    const internetSum = toNum(s.internet_sum)
 
-    // Extract payment aggregates
-    const paymentsCollectedSum = paymentAggregates.find(p => p.status === 'collected')?._sum?.amount || 0
-    const paymentsPendingSum = paymentAggregates.find(p => p.status === 'pending')?._sum?.amount || 0
-    const paymentsOverdueSum = paymentAggregates.find(p => p.status === 'overdue')?._sum?.amount || 0
-
-    // Extract utility aggregates with status-based breakdown
-    const [utilityPaidSum, utilityPendingSum, utilityOverdueSum] = await Promise.all([
-      prisma.utilityBill.aggregate({ where: { status: 'paid' }, _sum: { totalAmount: true } }),
-      prisma.utilityBill.aggregate({ where: { status: 'pending' }, _sum: { totalAmount: true } }),
-      prisma.utilityBill.aggregate({ where: { status: 'overdue' }, _sum: { totalAmount: true } })
-    ])
-
-    const utilitiesPaidSum = utilityPaidSum._sum.totalAmount || 0
-    const utilitiesPendingSum = utilityPendingSum._sum.totalAmount || 0
-    const utilitiesOverdueSum = utilityOverdueSum._sum.totalAmount || 0
-    const electricitySum = utilityAggregates._sum.electricityCost || 0
-    const waterSum = utilityAggregates._sum.waterCost || 0
-    const internetSum = utilityAggregates._sum.internetCost || 0
-
-    // Parking data
-    const monthlyParkingRevenue = parkingAggregates._sum.monthlyFee || 0
+    // Extract parking stats
+    const p = parkingStats[0] || {}
+    const monthlyParkingRevenue = toNum(p.monthly_fee_sum)
+    const parkingHouseholdsCount = toNum(p.households_count)
+    const carCount = toNum(p.car_count)
+    const motorcycleCount = toNum(p.motorcycle_count)
+    const bicycleCount = toNum(p.bicycle_count)
     const occupiedParkingSlots = totalParkingSlots
     const availableParkingSlots = MAX_PARKING_SLOTS - totalParkingSlots
 
-    // Extract parking by type
-    const carCount = parkingByType.find(p => p.type === 'car')?._count._all || 0
-    const motorcycleCount = parkingByType.find(p => p.type === 'motorcycle')?._count._all || 0
-    const bicycleCount = parkingByType.find(p => p.type === 'bicycle')?._count._all || 0
-
-    // Initialize last 6 months
+    // Initialize last 6 months for monthly revenue
     const monthlyRevenue: { [key: string]: { collected: number, pending: number, overdue: number } } = {}
     for (let i = 5; i >= 0; i--) {
       const date = new Date()
@@ -130,22 +117,22 @@ export async function GET() {
     }
 
     // Group payments by month
-    recentPayments.forEach(p => {
-      const key = p.dueDate.toISOString().slice(0, 7)
+    recentPayments.forEach(pay => {
+      const key = pay.dueDate.toISOString().slice(0, 7)
       if (monthlyRevenue[key]) {
-        if (p.status === 'collected') monthlyRevenue[key].collected += p.amount
-        else if (p.status === 'pending') monthlyRevenue[key].pending += p.amount
-        else if (p.status === 'overdue') monthlyRevenue[key].overdue += p.amount
+        if (pay.status === 'collected') monthlyRevenue[key].collected += pay.amount
+        else if (pay.status === 'pending') monthlyRevenue[key].pending += pay.amount
+        else if (pay.status === 'overdue') monthlyRevenue[key].overdue += pay.amount
       }
     })
 
     // Group utilities by month
-    recentUtilities.forEach(u => {
-      const key = u.dueDate.toISOString().slice(0, 7)
+    recentUtilities.forEach(util => {
+      const key = util.dueDate.toISOString().slice(0, 7)
       if (monthlyRevenue[key]) {
-        if (u.status === 'paid') monthlyRevenue[key].collected += u.totalAmount
-        else if (u.status === 'pending') monthlyRevenue[key].pending += u.totalAmount
-        else if (u.status === 'overdue') monthlyRevenue[key].overdue += u.totalAmount
+        if (util.status === 'paid') monthlyRevenue[key].collected += util.totalAmount
+        else if (util.status === 'pending') monthlyRevenue[key].pending += util.totalAmount
+        else if (util.status === 'overdue') monthlyRevenue[key].overdue += util.totalAmount
       }
     })
 
@@ -237,15 +224,10 @@ export async function GET() {
       }
     })
   } catch (error) {
-    // Log detailed error for debugging on Vercel
-    console.error('Get statistics error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    const errorStack = error instanceof Error ? error.stack : ''
-    console.error('Error details:', { message: errorMessage, stack: errorStack })
-    
+    console.error('Statistics API error:', error)
     return NextResponse.json({ 
-      error: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      error: 'Failed to load statistics',
+      message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }
