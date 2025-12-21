@@ -62,6 +62,7 @@ export function HouseholdList({ households, onHouseholdClick }: HouseholdListPro
       case 'paid': return { bg: 'bg-[rgba(122,197,85,0.2)]', text: 'text-[#7AC555]' };
       case 'pending': return { bg: 'bg-[rgba(223,168,116,0.2)]', text: 'text-[#d58d49]' };
       case 'overdue': return { bg: 'bg-[rgba(211,75,94,0.2)]', text: 'text-[#D34B5E]' };
+      case 'unoccupied': return { bg: 'bg-[rgba(234,179,8,0.2)]', text: 'text-[#EAB308]' };
       default: return { bg: 'bg-neutral-100', text: 'text-[#787486]' };
     }
   };
@@ -69,7 +70,9 @@ export function HouseholdList({ households, onHouseholdClick }: HouseholdListPro
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[20px]">
       {households.map((household) => {
-        const statusColor = getStatusColor(household.status);
+        const isUnoccupied = household.residents === 0 || (household.members && household.members.length === 0);
+        const displayStatus = isUnoccupied ? 'unoccupied' : household.status;
+        const statusColor = getStatusColor(displayStatus);
         return (
           <div 
             key={household.id}
@@ -83,7 +86,7 @@ export function HouseholdList({ households, onHouseholdClick }: HouseholdListPro
               </div>
               <div className={`${statusColor.bg} px-[12px] py-[4px] rounded-[4px]`}>
                 <p className={`font-medium text-xs ${statusColor.text} capitalize`}>
-                  {household.status}
+                  {isUnoccupied ? 'Unoccupied' : (household.status === 'paid' ? 'Occupied' : household.status)}
                 </p>
               </div>
             </div>

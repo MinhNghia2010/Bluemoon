@@ -11,34 +11,49 @@ export async function GET(
   try {
     const { id } = await params
 
-    const household = await prisma.household.findUnique({
-      where: { id },
-      include: {
-        members: true,
-        payments: {
-          include: { feeCategory: true },
-          orderBy: { dueDate: 'desc' }
-        },
-        parkingSlots: true,
-        utilityBills: {
-          orderBy: { dueDate: 'desc' }
+    // Fetch all data in parallel for speed
+    const [household, members, payments, parkingSlots, utilityBills] = await Promise.all([
+      prisma.household.findUnique({
+        where: { id },
+        select: {
+          id: true, unit: true, ownerName: true, area: true, floor: true,
+          moveInDate: true, phone: true, email: true, status: true, balance: true
         }
-      }
-    })
+      }),
+      prisma.householdMember.findMany({
+        where: { householdId: id },
+        select: { id: true, name: true, dateOfBirth: true, cccd: true, profilePic: true }
+      }),
+      prisma.payment.findMany({
+        where: { householdId: id },
+        select: { id: true, amount: true, status: true, dueDate: true, paymentDate: true, feeCategory: { select: { name: true } } },
+        orderBy: { dueDate: 'desc' },
+        take: 20
+      }),
+      prisma.parkingSlot.findMany({
+        where: { householdId: id },
+        select: { id: true, slotNumber: true, type: true, licensePlate: true, monthlyFee: true }
+      }),
+      prisma.utilityBill.findMany({
+        where: { householdId: id },
+        select: { id: true, month: true, totalAmount: true, status: true, dueDate: true },
+        orderBy: { dueDate: 'desc' },
+        take: 12
+      })
+    ])
 
     if (!household) {
-      return NextResponse.json(
-        { error: 'Household not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Household not found' }, { status: 404 })
     }
 
-    // Calculate balance
-    const balance = household.payments
-      .filter(p => p.status === 'pending' || p.status === 'overdue')
-      .reduce((sum, p) => sum + p.amount, 0)
-
-    return NextResponse.json({ ...household, residents: household.members.length, balance })
+    return NextResponse.json({
+      ...household,
+      members,
+      payments,
+      parkingSlots,
+      utilityBills,
+      residents: members.length
+    })
   } catch (error) {
     console.error('Get household error:', error)
     return NextResponse.json(

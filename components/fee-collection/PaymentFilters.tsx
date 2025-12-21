@@ -1,54 +1,37 @@
 interface PaymentFiltersProps {
   filter: 'all' | 'pending' | 'collected' | 'overdue';
   onFilterChange: (filter: 'all' | 'pending' | 'collected' | 'overdue') => void;
+  counts?: {
+    all: number;
+    pending: number;
+    collected: number;
+    overdue: number;
+  };
 }
 
-export function PaymentFilters({ filter, onFilterChange }: PaymentFiltersProps) {
+export function PaymentFilters({ filter, onFilterChange, counts }: PaymentFiltersProps) {
+  const filters = [
+    { id: 'all' as const, label: 'All', count: counts?.all },
+    { id: 'collected' as const, label: 'Paid', count: counts?.collected },
+    { id: 'pending' as const, label: 'Pending', count: counts?.pending },
+    { id: 'overdue' as const, label: 'Overdue', count: counts?.overdue }
+  ];
+
   return (
-    <div className="flex items-center gap-[12px]">
-      <button
-        onClick={() => onFilterChange('all')}
-        className={`px-[16px] py-[8px] rounded-[6px] font-medium text-sm ${
-          filter === 'all' 
-            ? 'bg-brand-primary text-white' 
-            : 'border border-border-default text-text-secondary hover:bg-bg-hover'
-        }`}
-      >
-        All Payments
-      </button>
-      
-      <button
-        onClick={() => onFilterChange('pending')}
-        className={`px-[16px] py-[8px] rounded-[6px] font-medium text-sm ${
-          filter === 'pending' 
-            ? 'bg-brand-primary text-white' 
-            : 'border border-border-default text-text-secondary hover:bg-bg-hover'
-        }`}
-      >
-        Pending
-      </button>
-
-      <button
-        onClick={() => onFilterChange('collected')}
-        className={`px-[16px] py-[8px] rounded-[6px] font-medium text-sm ${
-          filter === 'collected' 
-            ? 'bg-brand-primary text-white' 
-            : 'border border-border-default text-text-secondary hover:bg-bg-hover'
-        }`}
-      >
-        Collected
-      </button>
-
-      <button
-        onClick={() => onFilterChange('overdue')}
-        className={`px-[16px] py-[8px] rounded-[6px] font-medium text-sm ${
-          filter === 'overdue' 
-            ? 'bg-brand-primary text-white' 
-            : 'border border-border-default text-text-secondary hover:bg-bg-hover'
-        }`}
-      >
-        Overdue
-      </button>
+    <div className="flex gap-3 mb-6">
+      {filters.map((f) => (
+        <button
+          key={f.id}
+          onClick={() => onFilterChange(f.id)}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            filter === f.id
+              ? 'bg-brand-primary text-white'
+              : 'text-text-secondary hover:bg-bg-hover border border-border-default'
+          }`}
+        >
+          {f.label}{f.count !== undefined && ` (${f.count})`}
+        </button>
+      ))}
     </div>
   );
 }

@@ -111,7 +111,12 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
   
   if (!household) return null;
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string, memberCount: number) => {
+    // If no members, show as unoccupied with yellow color
+    if (memberCount === 0) {
+      return { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-600 dark:text-yellow-400', label: 'Unoccupied' };
+    }
+    
     switch (status) {
       case 'active': return { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-600 dark:text-green-400', label: 'Occupied' };
       case 'inactive': return { bg: 'bg-neutral-100 dark:bg-neutral-800', text: 'text-text-secondary', label: 'Vacant' };
@@ -122,7 +127,7 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
     }
   };
 
-  const statusColor = getStatusColor(household.status);
+  const statusColor = getStatusColor(household.status, members.length);
 
   return (
     <Modal isOpen={!!household} onClose={onClose} maxWidth="800px">

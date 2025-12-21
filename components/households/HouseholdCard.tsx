@@ -20,12 +20,20 @@ interface HouseholdCardProps {
 }
 
 export function HouseholdCard({ household, onClick, getStatusColor }: HouseholdCardProps) {
-  const statusColor = getStatusColor(household.status);
+  // Check if household has no residents (unoccupied)
+  const isUnoccupied = household.residents === 0;
+  
+  // Get status color - use yellow for unoccupied
+  const statusColor = isUnoccupied 
+    ? { bg: 'bg-[rgba(234,179,8,0.2)]', text: 'text-[#EAB308]' }
+    : getStatusColor(household.status);
 
   // Determine display status
-  const displayStatus = household.status === 'active' || household.status === 'paid' || household.status === 'pending' || household.status === 'overdue' 
-    ? 'Occupied' 
-    : 'Vacant';
+  const displayStatus = isUnoccupied 
+    ? 'Unoccupied'
+    : (household.status === 'active' || household.status === 'paid' || household.status === 'pending' || household.status === 'overdue' 
+      ? 'Occupied' 
+      : 'Vacant');
 
   return (
     <div 

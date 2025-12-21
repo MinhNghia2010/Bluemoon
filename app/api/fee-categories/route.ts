@@ -7,10 +7,22 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     const categories = await prisma.feeCategory.findMany({
+      select: {
+        id: true,
+        name: true,
+        amount: true,
+        frequency: true,
+        description: true,
+        isActive: true
+      },
       orderBy: { name: 'asc' }
     })
 
-    return NextResponse.json(categories)
+    return NextResponse.json(categories, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=59'
+      }
+    })
   } catch (error) {
     console.error('Get fee categories error:', error)
     return NextResponse.json(

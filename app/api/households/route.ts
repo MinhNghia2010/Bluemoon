@@ -26,32 +26,35 @@ export async function GET(request: NextRequest) {
 
     const households = await prisma.household.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        unit: true,
+        ownerName: true,
+        area: true,
+        floor: true,
+        moveInDate: true,
+        phone: true,
+        email: true,
+        status: true,
+        balance: true,
         members: {
-          select: {
-            id: true,
-            name: true,
-            profilePic: true
-          }
-        },
-        payments: {
-          where: { status: 'pending' },
-          select: { amount: true }
+          select: { id: true, name: true, profilePic: true }
         }
       },
       orderBy: { unit: 'asc' }
     })
 
-    // Calculate balance for each household and add member count
+    // Add member count
     const householdsWithBalance = households.map(household => ({
       ...household,
-      residents: household.members.length,
-      balance: household.payments.reduce((sum, p) => sum + p.amount, 0),
-      members: household.members, // Keep members for avatar display
-      payments: undefined
+      residents: household.members.length
     }))
 
-    return NextResponse.json(householdsWithBalance)
+    return NextResponse.json(householdsWithBalance, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59'
+      }
+    })
   } catch (error) {
     console.error('Get households error:', error)
     return NextResponse.json(

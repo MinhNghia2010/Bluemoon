@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, ChevronDown } from 'lucide-react';
 import { SummaryCard } from './shared/SummaryCard';
 import { HouseholdPaymentCard } from './fee-collection/HouseholdPaymentCard';
 import { PaymentFilters } from './fee-collection/PaymentFilters';
@@ -55,6 +55,43 @@ export function FeeCollectionView() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'collected' | 'overdue'>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all');
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i);
+
+  const [isMonthOpen, setIsMonthOpen] = useState(false);
+  const [isYearOpen, setIsYearOpen] = useState(false);
+  const monthDropdownRef = useRef<HTMLDivElement>(null);
+  const yearDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (monthDropdownRef.current && !monthDropdownRef.current.contains(event.target as Node)) {
+        setIsMonthOpen(false);
+      }
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target as Node)) {
+        setIsYearOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const getMonthLabel = (month: number | 'all') => {
+    if (month === 'all') return 'All';
+    return months[month];
+  };
+
+  const getYearLabel = (year: number | 'all') => {
+    if (year === 'all') return 'All';
+    return year.toString();
+  };
 
   // Fetch data from API
   const fetchData = async () => {
@@ -144,10 +181,22 @@ export function FeeCollectionView() {
     setSelectedPayment(null);
   };
 
-  // Filter payments
-  const filteredPayments = filter === 'all' 
-    ? payments 
-    : payments.filter(p => p.status === filter);
+  // Filter payments by status and month/year
+  const filteredPayments = payments.filter(p => {
+    const paymentDate = new Date(p.dueDate);
+    const matchesMonth = selectedMonth === 'all' || paymentDate.getMonth() === selectedMonth;
+    const matchesYear = selectedYear === 'all' || paymentDate.getFullYear() === selectedYear;
+    const matchesStatus = filter === 'all' || p.status === filter;
+    return matchesMonth && matchesYear && matchesStatus;
+  });
+
+  // Get payments for the selected month/year (for counts)
+  const monthYearPayments = payments.filter(p => {
+    const paymentDate = new Date(p.dueDate);
+    const matchesMonth = selectedMonth === 'all' || paymentDate.getMonth() === selectedMonth;
+    const matchesYear = selectedYear === 'all' || paymentDate.getFullYear() === selectedYear;
+    return matchesMonth && matchesYear;
+  });
 
   // Group payments by household and sort by unit
   const groupedHouseholds: GroupedHousehold[] = households
@@ -172,9 +221,10 @@ export function FeeCollectionView() {
     .filter(h => h.payments.length > 0) // Only show households with payments matching the filter
     .sort((a, b) => a.unit.localeCompare(b.unit)); // Sort by unit number
 
-  const pendingPayments = payments.filter(p => p.status === 'pending');
-  const collectedPayments = payments.filter(p => p.status === 'collected');
-  const overduePayments = payments.filter(p => p.status === 'overdue');
+  // Filter counts for selected month/year
+  const pendingPayments = monthYearPayments.filter(p => p.status === 'pending');
+  const collectedPayments = monthYearPayments.filter(p => p.status === 'collected');
+  const overduePayments = monthYearPayments.filter(p => p.status === 'overdue');
 
   // Format currency in USD
   const formatCurrency = (amount: number) => {
@@ -250,8 +300,76 @@ export function FeeCollectionView() {
         </div>
       </div>
 
+      {/* Month/Year Filter */}
+      <div className="grid grid-cols-2 gap-5 mb-8">
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-2">Select month</label>
+          <div className="relative" ref={monthDropdownRef}>
+            <button
+              type="button"
+              className="input-default text-sm flex items-center justify-between w-full"
+              onClick={() => setIsMonthOpen(!isMonthOpen)}
+            >
+              {getMonthLabel(selectedMonth)}
+              <ChevronDown className={`size-4 text-text-secondary transition-transform ${isMonthOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isMonthOpen && (
+              <div className="absolute z-10 bg-bg-white border border-border-default rounded-sm shadow-lg w-full mt-1 overflow-hidden max-h-60 overflow-y-auto scrollbar-hide">
+                <div 
+                  className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors ${selectedMonth === 'all' ? 'bg-bg-hover' : ''}`}
+                  onClick={() => { setSelectedMonth('all'); setIsMonthOpen(false); }}
+                >
+                  All
+                </div>
+                {months.map((month, index) => (
+                  <div 
+                    key={month}
+                    className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors ${selectedMonth === index ? 'bg-bg-hover' : ''}`}
+                    onClick={() => { setSelectedMonth(index); setIsMonthOpen(false); }}
+                  >
+                    {month}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-2">Select year</label>
+          <div className="relative" ref={yearDropdownRef}>
+            <button
+              type="button"
+              className="input-default text-sm flex items-center justify-between w-full"
+              onClick={() => setIsYearOpen(!isYearOpen)}
+            >
+              {getYearLabel(selectedYear)}
+              <ChevronDown className={`size-4 text-text-secondary transition-transform ${isYearOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isYearOpen && (
+              <div className="absolute z-10 bg-bg-white border border-border-default rounded-sm shadow-lg w-full mt-1 overflow-hidden max-h-60 overflow-y-auto scrollbar-hide">
+                <div 
+                  className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors ${selectedYear === 'all' ? 'bg-bg-hover' : ''}`}
+                  onClick={() => { setSelectedYear('all'); setIsYearOpen(false); }}
+                >
+                  All
+                </div>
+                {years.map((year) => (
+                  <div 
+                    key={year}
+                    className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors ${selectedYear === year ? 'bg-bg-hover' : ''}`}
+                    onClick={() => { setSelectedYear(year); setIsYearOpen(false); }}
+                  >
+                    {year}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-[20px] mb-[32px]">
+      <div className="grid grid-cols-3 gap-5 mb-8">
         {summaryCards.map((card, index) => (
           <SummaryCard
             key={index}
@@ -265,8 +383,17 @@ export function FeeCollectionView() {
       </div>
 
       {/* Filters */}
-      <div className="mb-[24px]">
-        <PaymentFilters filter={filter} onFilterChange={setFilter} />
+      <div className="mb-6">
+        <PaymentFilters 
+          filter={filter} 
+          onFilterChange={setFilter}
+          counts={{
+            all: monthYearPayments.length,
+            pending: pendingPayments.length,
+            collected: collectedPayments.length,
+            overdue: overduePayments.length
+          }}
+        />
       </div>
 
       {/* Loading State */}

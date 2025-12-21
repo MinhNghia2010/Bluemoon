@@ -124,60 +124,62 @@ export function HouseholdPaymentCard({
         </div>
       </div>
 
-      {/* Payments List - Expandable */}
-      {isExpanded && (
-        <div className="border-t border-border-light">
-          {sortedPayments.length === 0 ? (
-            <div className="p-4 text-center text-text-secondary">
-              No payments recorded
-            </div>
-          ) : (
-            <div className="divide-y divide-border-light">
-              {sortedPayments.map((payment) => (
-                <div 
-                  key={payment.id} 
-                  className="p-4 flex items-center justify-between hover:bg-bg-hover transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    {getStatusIcon(payment.status)}
-                    <div>
-                      <p className="font-medium text-text-primary text-sm">{payment.category}</p>
-                      <p className="text-text-secondary text-xs">Due: {payment.dueDate}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="font-semibold text-text-primary">{formatCurrency(payment.amount)}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${getStatusBadge(payment.status)}`}>
-                        {payment.status}
-                      </span>
-                    </div>
-
-                    {payment.status !== 'collected' ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onMarkAsPaid(payment.id);
-                        }}
-                        className="px-3 py-1.5 bg-brand-primary text-white text-xs font-medium rounded-md hover:opacity-90 transition-opacity"
-                      >
-                        Mark Paid
-                      </button>
-                    ) : (
-                      <div className="w-[76px] text-center">
-                        <span className="text-green-600 dark:text-green-400 text-xs">
-                          {payment.paymentDate}
-                        </span>
-                      </div>
-                    )}
+      {/* Payments List - Expandable with animation */}
+      <div 
+        className={`border-t border-border-light overflow-hidden transition-all duration-300 ease-in-out ${
+          isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        {sortedPayments.length === 0 ? (
+          <div className="p-4 text-center text-text-secondary">
+            No payments recorded
+          </div>
+        ) : (
+          <div className="divide-y divide-border-light">
+            {sortedPayments.map((payment) => (
+              <div 
+                key={payment.id} 
+                className="p-4 flex items-center justify-between hover:bg-bg-hover transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  {getStatusIcon(payment.status)}
+                  <div>
+                    <p className="font-medium text-text-primary text-sm">{payment.category}</p>
+                    <p className="text-text-secondary text-xs">Due: {payment.dueDate}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="font-semibold text-text-primary">{formatCurrency(payment.amount)}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${getStatusBadge(payment.status)}`}>
+                      {payment.status}
+                    </span>
+                  </div>
+
+                  {payment.status !== 'collected' ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMarkAsPaid(payment.id);
+                      }}
+                      className="px-3 py-1.5 bg-brand-primary text-white text-xs font-medium rounded-md hover:opacity-90 transition-opacity"
+                    >
+                      Mark Paid
+                    </button>
+                  ) : (
+                    <div className="w-[76px] text-center">
+                      <span className="text-green-600 dark:text-green-400 text-xs">
+                        {payment.paymentDate}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

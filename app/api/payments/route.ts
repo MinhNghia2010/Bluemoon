@@ -27,18 +27,26 @@ export async function GET(request: NextRequest) {
 
     const payments = await prisma.payment.findMany({
       where,
-      include: {
-        household: {
-          select: { id: true, unit: true, ownerName: true }
-        },
-        feeCategory: {
-          select: { id: true, name: true }
-        }
+      select: {
+        id: true,
+        amount: true,
+        status: true,
+        dueDate: true,
+        paymentDate: true,
+        paymentMethod: true,
+        householdId: true,
+        feeCategoryId: true,
+        household: { select: { id: true, unit: true, ownerName: true } },
+        feeCategory: { select: { id: true, name: true } }
       },
       orderBy: { dueDate: 'desc' }
     })
 
-    return NextResponse.json(payments)
+    return NextResponse.json(payments, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59'
+      }
+    })
   } catch (error) {
     console.error('Get payments error:', error)
     return NextResponse.json(

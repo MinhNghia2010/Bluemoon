@@ -22,15 +22,24 @@ export async function GET(request: NextRequest) {
 
     const parkingSlots = await prisma.parkingSlot.findMany({
       where,
-      include: {
-        household: {
-          select: { id: true, unit: true, ownerName: true }
-        }
+      select: {
+        id: true,
+        slotNumber: true,
+        type: true,
+        licensePlate: true,
+        status: true,
+        monthlyFee: true,
+        householdId: true,
+        household: { select: { id: true, unit: true, ownerName: true, phone: true } }
       },
       orderBy: { slotNumber: 'asc' }
     })
 
-    return NextResponse.json(parkingSlots)
+    return NextResponse.json(parkingSlots, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59'
+      }
+    })
   } catch (error) {
     console.error('Get parking slots error:', error)
     return NextResponse.json(

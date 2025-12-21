@@ -125,14 +125,24 @@ export function ParkingView() {
     );
   }
 
-  // Statistics
+  // Statistics - all vehicles (active and inactive) occupy slots
+  const MAX_PARKING_SLOTS = 500;
+  const MAX_PARKING_HOUSEHOLDS = 100;
+  
+  // Count unique households
+  const uniqueHouseholds = new Set(parkingSlots.filter(s => s.householdId).map(s => s.householdId)).size;
+  
   const stats = {
     total: parkingSlots.length,
     active: parkingSlots.filter(s => s.status === 'active').length,
+    inactive: parkingSlots.filter(s => s.status === 'inactive').length,
     cars: parkingSlots.filter(s => s.vehicleType === 'car').length,
     motorcycles: parkingSlots.filter(s => s.vehicleType === 'motorcycle').length,
     bicycles: parkingSlots.filter(s => s.vehicleType === 'bicycle').length,
-    monthlyRevenue: parkingSlots.filter(s => s.status === 'active').reduce((sum, s) => sum + s.monthlyFee, 0),
+    monthlyRevenue: parkingSlots.reduce((sum, s) => sum + s.monthlyFee, 0), // All vehicles count
+    availableSlots: MAX_PARKING_SLOTS - parkingSlots.length,
+    householdsWithParking: uniqueHouseholds,
+    availableHouseholdSlots: MAX_PARKING_HOUSEHOLDS - uniqueHouseholds
   };
 
   // Format currency in USD
@@ -146,15 +156,15 @@ export function ParkingView() {
 
   const statisticsCards = [
     {
-      label: 'Total Slots',
-      value: stats.total,
-      detail: `${stats.active} Active`,
+      label: 'Vehicle Slots',
+      value: `${stats.total}/${MAX_PARKING_SLOTS}`,
+      detail: `${stats.availableSlots} Available`,
       icon: Car
     },
     {
       label: 'Monthly Revenue',
       value: formatCurrency(stats.monthlyRevenue),
-      detail: `From ${stats.active} active slots`,
+      detail: `From ${stats.total} vehicles`,
       icon: Plus
     }
   ];

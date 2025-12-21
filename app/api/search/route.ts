@@ -81,7 +81,11 @@ export async function GET(request: NextRequest) {
       }))
     ]
 
-    return NextResponse.json({ results: results.slice(0, 10) })
+    return NextResponse.json({ results: results.slice(0, 10) }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=30'
+      }
+    })
   } catch (error) {
     console.error('Search error:', error)
     return NextResponse.json(

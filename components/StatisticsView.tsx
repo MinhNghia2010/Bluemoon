@@ -140,11 +140,15 @@ export function StatisticsView() {
           { title: 'Grand Total', value: formatCurrency(stats?.financials?.grandTotal || 0), subtitle: 'All fees combined', dotColor: 'bg-[#5030e5]', valueColor: 'text-purple-600 dark:text-purple-400' }
         ];
 
+        const maxHouseholds = 100;
+        const totalHouseholds = stats?.overview?.totalHouseholds || 0;
+        const availableHouseholds = maxHouseholds - totalHouseholds;
+        
         const quickStats = [
-          { icon: Home, label: 'Households', value: stats?.overview?.totalHouseholds || 0, subtitle: `${stats?.overview?.activeHouseholds || 0} active`, bgColor: 'bg-purple-100 dark:bg-purple-900/30', iconColor: 'text-purple-600 dark:text-purple-400' },
+          { icon: Home, label: 'Households', value: totalHouseholds, subtitle: `${availableHouseholds} available`, bgColor: 'bg-purple-100 dark:bg-purple-900/30', iconColor: 'text-purple-600 dark:text-purple-400' },
           { icon: Users, label: 'Total Residents', value: stats?.overview?.totalResidents || 0, subtitle: 'All members', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30', iconColor: 'text-yellow-600 dark:text-yellow-400' },
-          { icon: Receipt, label: 'Fee Payments', value: stats?.overview?.totalPayments || 0, subtitle: `${stats?.overview?.feeCollectionRate || 0}% collected`, bgColor: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600 dark:text-blue-400' },
-          { icon: Car, label: 'Parking Slots', value: stats?.overview?.totalParkingSlots || 0, subtitle: `${stats?.overview?.occupiedParkingSlots || 0} occupied`, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' }
+          { icon: Car, label: 'Occupied Vehicles', value: `${stats?.overview?.totalParkingSlots || 0}/${stats?.overview?.maxParkingSlots || 500}`, subtitle: `${(stats?.overview?.maxParkingSlots || 500) - (stats?.overview?.totalParkingSlots || 0)} available`, bgColor: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
+          { icon: Receipt, label: 'Fee Payments', value: stats?.overview?.totalPayments || 0, subtitle: `${stats?.overview?.collectedPayments || 0} collected`, bgColor: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600 dark:text-blue-400' }
         ];
 
         return (
@@ -266,17 +270,16 @@ export function StatisticsView() {
         );
 
       case 'parking':
+        const maxSlots = stats?.parking?.maxSlots || 500;
         const parkingSummaryCards = [
-          { title: 'Total Slots', value: String(stats?.parking?.total || 0), subtitle: 'All parking spaces', dotColor: 'bg-[#5030e5]', valueColor: 'text-purple-600 dark:text-purple-400' },
-          { title: 'Occupied', value: String(stats?.parking?.occupied || 0), subtitle: 'Currently in use', dotColor: 'bg-[#7AC555]', valueColor: 'text-green-600 dark:text-green-400' },
-          { title: 'Available', value: String(stats?.parking?.available || 0), subtitle: 'Ready to rent', dotColor: 'bg-[#d58d49]', valueColor: 'text-orange-600 dark:text-orange-400' },
-          { title: 'Monthly Revenue', value: formatCurrency(stats?.parking?.monthlyRevenue || 0), subtitle: 'From occupied slots', dotColor: 'bg-[#76A5EA]', valueColor: 'text-blue-600 dark:text-blue-400' }
+          { title: 'Occupied Vehicles', value: `${stats?.parking?.total || 0}/${maxSlots}`, subtitle: `${stats?.parking?.available || 0} slots available`, dotColor: 'bg-[#5030e5]', valueColor: 'text-purple-600 dark:text-purple-400' },
+          { title: 'Monthly Revenue', value: formatCurrency(stats?.parking?.monthlyRevenue || 0), subtitle: 'From all vehicles', dotColor: 'bg-[#76A5EA]', valueColor: 'text-blue-600 dark:text-blue-400' }
         ];
 
         return (
           <>
             {/* Parking Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
               {parkingSummaryCards.map((card, index) => (
                 <SummaryCard key={index} {...card} />
               ))}

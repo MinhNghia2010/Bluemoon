@@ -22,15 +22,33 @@ export async function GET(request: NextRequest) {
 
     const utilityBills = await prisma.utilityBill.findMany({
       where,
-      include: {
-        household: {
-          select: { id: true, unit: true, ownerName: true, phone: true }
-        }
+      select: {
+        id: true,
+        month: true,
+        periodStart: true,
+        periodEnd: true,
+        dueDate: true,
+        electricityUsage: true,
+        electricityRate: true,
+        electricityCost: true,
+        waterUsage: true,
+        waterRate: true,
+        waterCost: true,
+        internetCost: true,
+        totalAmount: true,
+        status: true,
+        paidDate: true,
+        householdId: true,
+        household: { select: { id: true, unit: true, ownerName: true, phone: true } }
       },
       orderBy: { dueDate: 'desc' }
     })
 
-    return NextResponse.json(utilityBills)
+    return NextResponse.json(utilityBills, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59'
+      }
+    })
   } catch (error) {
     console.error('Get utility bills error:', error)
     return NextResponse.json(
