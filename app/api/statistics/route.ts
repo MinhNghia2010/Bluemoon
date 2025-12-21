@@ -90,10 +90,10 @@ export async function GET() {
       }[]>`
         SELECT 
           SUM("monthlyFee") as monthly_fee_sum,
-          COUNT(DISTINCT "householdId") FILTER (WHERE "householdId" IS NOT NULL) as households_count,
-          COUNT(*) FILTER (WHERE type = 'car') as car_count,
-          COUNT(*) FILTER (WHERE type = 'motorcycle') as motorcycle_count,
-          COUNT(*) FILTER (WHERE type = 'bicycle') as bicycle_count
+          COUNT(DISTINCT "householdId") as households_count,
+          SUM(CASE WHEN type = 'car' THEN 1 ELSE 0 END) as car_count,
+          SUM(CASE WHEN type = 'motorcycle' THEN 1 ELSE 0 END) as motorcycle_count,
+          SUM(CASE WHEN type = 'bicycle' THEN 1 ELSE 0 END) as bicycle_count
         FROM "ParkingSlot"
       `,
       // Monthly data (last 6 months) - optimized select
