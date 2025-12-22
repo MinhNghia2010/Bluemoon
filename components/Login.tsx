@@ -1,47 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import svgPaths from "@/imports/svg-uiac8iywkt";
 import { DarkModeToggle } from "./shared/DarkModeToggle";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
-
-function VuesaxBulkColorfilter() {
-  return (
-    <div
-      className="absolute contents inset-0"
-      data-name="vuesax/bulk/colorfilter"
-    >
-      <svg
-        className="block size-full"
-        fill="none"
-        preserveAspectRatio="none"
-        viewBox="0 0 24 24"
-      >
-        <g id="colorfilter">
-          <path
-            d={svgPaths.p24d5ffc0}
-            fill="var(--brand-primary)"
-            id="Vector"
-            opacity="0.6"
-          />
-          <path
-            d={svgPaths.p960d370}
-            fill="var(--brand-primary)"
-            id="Vector_2"
-          />
-          <path
-            d={svgPaths.p319717b0}
-            fill="var(--brand-primary)"
-            id="Vector_3"
-            opacity="0.4"
-          />
-          <g id="Vector_4" opacity="0"></g>
-        </g>
-      </svg>
-    </div>
-  );
-}
 
 export function Login() {
   const { login } = useAuth();
@@ -88,7 +50,7 @@ export function Login() {
         <div className="bg-bg-white rounded-lg p-12 shadow-lg border border-border-light">
           <div className="flex items-center gap-3 mb-8">
             <img
-              src="/images/32ca64d17b2402668538618763cc0b2a820003ec.png"
+              src="/images/Logo.png"
               alt="BlueMoon Logo"
               className="size-12"
             />
