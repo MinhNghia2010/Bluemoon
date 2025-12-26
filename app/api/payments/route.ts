@@ -36,13 +36,22 @@ export async function GET(request: NextRequest) {
         paymentMethod: true,
         householdId: true,
         feeCategoryId: true,
-        household: { select: { id: true, unit: true, ownerName: true } },
+        household: { select: { id: true, unit: true, owner: { select: { name: true } } } },
         feeCategory: { select: { id: true, name: true } }
       },
       orderBy: { dueDate: 'desc' }
     })
 
-    return NextResponse.json(payments, {
+    // Add computed ownerName for backward compatibility
+    const paymentsWithOwnerName = payments.map(p => ({
+      ...p,
+      household: {
+        ...p.household,
+        ownerName: p.household?.owner?.name || 'No owner'
+      }
+    }))
+
+    return NextResponse.json(paymentsWithOwnerName, {
       headers: {
         'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59'
       }

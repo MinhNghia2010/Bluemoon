@@ -28,7 +28,7 @@ export function HouseholdPaymentCard({
   payments,
   onMarkAsPaid 
 }: HouseholdPaymentCardProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

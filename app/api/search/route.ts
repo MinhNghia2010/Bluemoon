@@ -20,13 +20,13 @@ export async function GET(request: NextRequest) {
         where: {
           OR: [
             { unit: { contains: query, mode: 'insensitive' } },
-            { ownerName: { contains: query, mode: 'insensitive' } },
+            { owner: { name: { contains: query, mode: 'insensitive' } } },
             { email: { contains: query, mode: 'insensitive' } },
             { phone: { contains: query, mode: 'insensitive' } }
           ]
         },
         take: 5,
-        select: { id: true, unit: true, ownerName: true }
+        select: { id: true, unit: true, owner: { select: { name: true } } }
       }),
       
       // Search members
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
           ]
         },
         take: 5,
-        select: { id: true, slotNumber: true, licensePlate: true, type: true, household: { select: { unit: true, ownerName: true } } }
+        select: { id: true, slotNumber: true, licensePlate: true, type: true, household: { select: { unit: true, owner: { select: { name: true } } } } }
       })
     ])
 
@@ -62,21 +62,21 @@ export async function GET(request: NextRequest) {
         type: 'household' as const,
         id: h.id,
         title: `Unit ${h.unit}`,
-        subtitle: h.ownerName,
+        subtitle: h.owner?.name || 'No owner',
         view: 'households' as const
       })),
       ...members.map(m => ({
         type: 'member' as const,
         id: m.id,
         title: m.name,
-        subtitle: `Unit ${m.household.unit} • CCCD: ${m.cccd}`,
+        subtitle: `Unit ${m.household?.unit || 'N/A'} • CCCD: ${m.cccd}`,
         view: 'demography' as const
       })),
       ...parking.map(p => ({
         type: 'parking' as const,
         id: p.id,
         title: `Slot ${p.slotNumber}`,
-        subtitle: `${p.household?.ownerName || 'No owner'} • ${p.licensePlate || 'No plate'}`,
+        subtitle: `${p.household?.owner?.name || 'No owner'} • ${p.licensePlate || 'No plate'}`,
         view: 'parking' as const
       }))
     ]

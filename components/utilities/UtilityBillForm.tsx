@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Check, X } from 'lucide-react';
+import { ChevronDown, Check, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { householdsApi } from '@/lib/api';
-import { AddSquareIcon } from '../shared/AddSquareIcon';
 import type { UtilityBill } from '../UtilitiesView';
 
 interface UtilityBillFormProps {
@@ -500,9 +499,7 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
             type="submit"
             className="btn-primary flex items-center gap-2"
           >
-            <div className="relative size-5">
-              <AddSquareIcon className="relative size-5" />
-            </div>
+            <Plus className="w-5 h-5" />
             {bill ? 'Update Bill' : 'Add Bill'}
           </button>
         </div>

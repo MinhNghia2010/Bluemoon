@@ -288,7 +288,13 @@ export function DatePickerInput({
             <CalendarIcon className="w-4 h-4" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 bg-bg-white border-border-light" align="end">
+        <PopoverContent 
+          className="w-auto p-0 bg-bg-white border-border-light" 
+          align="end"
+          side="bottom"
+          sideOffset={8}
+          avoidCollisions={false}
+        >
           <Calendar
             mode="single"
             selected={dateValue}

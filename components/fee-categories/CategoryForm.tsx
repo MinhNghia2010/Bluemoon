@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { AddSquareIcon } from '../shared/AddSquareIcon';
-import { ChevronDown, Check, X } from 'lucide-react';
+import { ChevronDown, Check, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FeeCategory {
@@ -317,9 +316,7 @@ export function CategoryForm({ category, onSave, onCancel }: CategoryFormProps) 
           onClick={handleSubmit}
           className="btn-primary flex items-center gap-2"
         >
-          <div className="relative size-5">
-            <AddSquareIcon className="relative size-5" />
-          </div>
+          <Plus className="w-5 h-5" />
           {isEditMode ? 'Update Category' : 'Add Category'}
         </button>
       </div>

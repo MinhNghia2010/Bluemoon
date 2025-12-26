@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { unit: { contains: search, mode: 'insensitive' } },
-        { ownerName: { contains: search, mode: 'insensitive' } },
+        { owner: { name: { contains: search, mode: 'insensitive' } } },
         { email: { contains: search, mode: 'insensitive' } }
       ]
     }
@@ -29,7 +29,15 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         unit: true,
-        ownerName: true,
+        ownerId: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            cccd: true,
+            profilePic: true
+          }
+        },
         area: true,
         floor: true,
         moveInDate: true,
@@ -38,15 +46,17 @@ export async function GET(request: NextRequest) {
         status: true,
         balance: true,
         members: {
+          where: { status: 'living' },
           select: { id: true, name: true, profilePic: true }
         }
       },
       orderBy: { unit: 'asc' }
     })
 
-    // Add member count
+    // Transform to include ownerName for backward compatibility
     const householdsWithBalance = households.map(household => ({
       ...household,
+      ownerName: household.owner?.name || 'No owner',
       residents: household.members.length
     }))
 
@@ -69,11 +79,11 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
 
-    const { unit, ownerName, area, floor, moveInDate, phone, email } = data
+    const { unit, ownerId, area, floor, moveInDate, phone, email } = data
 
-    if (!unit || !ownerName || !phone || !email) {
+    if (!unit || !phone || !email) {
       return NextResponse.json(
-        { error: 'Unit, owner name, phone, and email are required' },
+        { error: 'Unit, phone, and email are required' },
         { status: 400 }
       )
     }
@@ -93,7 +103,7 @@ export async function POST(request: NextRequest) {
     const household = await prisma.household.create({
       data: {
         unit,
-        ownerName,
+        ownerId: ownerId || null,
         area: area ? parseFloat(area) : null,
         floor: floor ? parseInt(floor) : null,
         moveInDate: moveInDate ? new Date(moveInDate) : null,
@@ -102,11 +112,21 @@ export async function POST(request: NextRequest) {
         status: 'active'
       },
       include: {
-        members: true
+        members: true,
+        owner: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       }
     })
 
-    return NextResponse.json({ ...household, residents: household.members.length }, { status: 201 })
+    return NextResponse.json({ 
+      ...household, 
+      ownerName: household.owner?.name || 'No owner',
+      residents: household.members.length 
+    }, { status: 201 })
   } catch (error) {
     console.error('Create household error:', error)
     return NextResponse.json(

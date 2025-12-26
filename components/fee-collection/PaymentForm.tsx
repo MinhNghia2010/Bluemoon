@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Plus, X, Users, Check } from 'lucide-react';
 import { format } from 'date-fns';
-import { AddSquareIcon } from '../shared/AddSquareIcon';
 import { DatePickerInput } from '../shared/DatePickerInput';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { householdsApi, feeCategoriesApi } from '@/lib/api';
@@ -775,9 +774,7 @@ export function PaymentForm({ payment, onSave, onBulkSave, onCancel }: PaymentFo
             className="btn-primary flex items-center gap-2"
               disabled={isSaving}
             >
-            <div className="relative size-5">
-              <AddSquareIcon className="relative size-5" />
-            </div>
+            <Plus className="w-5 h-5" />
               {isSaving ? 'Saving...' : (
                 mode === 'single' 
                   ? (payment ? 'Update Payment' : 'Create Payment')

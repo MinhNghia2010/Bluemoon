@@ -20,22 +20,36 @@ export async function GET(request: NextRequest) {
       where.type = type
     }
 
-    const parkingSlots = await prisma.parkingSlot.findMany({
+    const parkingSlots = await (prisma as any).parkingSlot.findMany({
       where,
-      select: {
-        id: true,
-        slotNumber: true,
-        type: true,
-        licensePlate: true,
-        status: true,
-        monthlyFee: true,
-        householdId: true,
-        household: { select: { id: true, unit: true, ownerName: true, phone: true } }
+      include: {
+        household: {
+          include: {
+            owner: true
+          }
+        }
       },
       orderBy: { slotNumber: 'asc' }
     })
 
-    return NextResponse.json(parkingSlots, {
+    // Transform for response with ownerName for backward compatibility
+    const slotsWithOwnerName = parkingSlots.map((slot: any) => ({
+      id: slot.id,
+      slotNumber: slot.slotNumber,
+      type: slot.type,
+      licensePlate: slot.licensePlate,
+      status: slot.status,
+      monthlyFee: slot.monthlyFee,
+      householdId: slot.householdId,
+      household: slot.household ? {
+        id: slot.household.id,
+        unit: slot.household.unit,
+        phone: slot.household.phone,
+        ownerName: slot.household.owner?.name || 'No owner'
+      } : null
+    }))
+
+    return NextResponse.json(slotsWithOwnerName, {
       headers: {
         'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59'
       }

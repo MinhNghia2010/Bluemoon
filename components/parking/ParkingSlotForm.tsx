@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Car, Bike, Motorbike, Check, X } from 'lucide-react';
+import { ChevronDown, Car, Bike, Motorbike, Check, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { AddSquareIcon } from '../shared/AddSquareIcon';
 import type { ParkingSlot } from '../ParkingView';
 
 interface Member {
@@ -424,9 +423,7 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
             type="submit"
             className="btn-primary flex items-center gap-2"
           >
-            <div className="relative size-5">
-              <AddSquareIcon className="relative size-5" />
-            </div>
+            <Plus className="w-5 h-5" />
             {slot ? 'Update Slot' : 'Add Slot'}
           </button>
         </div>

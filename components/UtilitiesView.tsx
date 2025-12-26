@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react';
-import { Zap, Droplet, Wifi } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Zap, Droplet, Wifi, ChevronDown } from 'lucide-react';
 import { PageHeader } from './shared/PageHeader';
 import { FilterButtons } from './shared/FilterButtons';
 import { StatsGrid } from './shared/StatsGrid';
@@ -30,12 +30,43 @@ export interface UtilityBill {
 
 type ViewMode = 'list' | 'add' | 'edit';
 
+const monthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
 export function UtilitiesView() {
   const [utilityBills, setUtilityBills] = useState<UtilityBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedBill, setSelectedBill] = useState<UtilityBill | null>(null);
+  
+  // Month/Year filter with current month/year as default
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth());
+  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
+  const [isMonthOpen, setIsMonthOpen] = useState(false);
+  const [isYearOpen, setIsYearOpen] = useState(false);
+  const monthDropdownRef = useRef<HTMLDivElement>(null);
+  const yearDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Generate years array (current year and 5 years back)
+  const years = Array.from({ length: 6 }, (_, i) => currentDate.getFullYear() - 5 + i);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (monthDropdownRef.current && !monthDropdownRef.current.contains(event.target as Node)) {
+        setIsMonthOpen(false);
+      }
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target as Node)) {
+        setIsYearOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const fetchUtilityBills = async () => {
     try {
@@ -70,9 +101,15 @@ export function UtilitiesView() {
     fetchUtilityBills();
   }, []);
 
+  // Filter bills by selected month/year
+  const monthYearFilteredBills = utilityBills.filter(bill => {
+    const billMonth = `${monthNames[selectedMonth]} ${selectedYear}`;
+    return bill.month === billMonth;
+  });
+
   const filteredBills = filter === 'all' 
-    ? utilityBills 
-    : utilityBills.filter(b => b.status === filter);
+    ? monthYearFilteredBills 
+    : monthYearFilteredBills.filter(b => b.status === filter);
 
   const handleSave = async (data: Partial<UtilityBill>) => {
     try {
@@ -166,41 +203,41 @@ export function UtilitiesView() {
     }).format(amount);
   };
 
-  // Statistics
+  // Statistics (based on filtered month/year)
   const stats = {
-    totalBills: utilityBills.length,
-    paid: utilityBills.filter(b => b.status === 'paid').length,
-    pending: utilityBills.filter(b => b.status === 'pending').length,
-    overdue: utilityBills.filter(b => b.status === 'overdue').length,
-    totalElectricity: utilityBills.reduce((sum, b) => sum + (b.electricityCost || 0), 0),
-    totalWater: utilityBills.reduce((sum, b) => sum + (b.waterCost || 0), 0),
-    totalInternet: utilityBills.reduce((sum, b) => sum + (b.internetCost || 0), 0),
-    totalRevenue: utilityBills.reduce((sum, b) => sum + (b.totalAmount || 0), 0),
+    totalBills: monthYearFilteredBills.length,
+    paid: monthYearFilteredBills.filter(b => b.status === 'paid').length,
+    pending: monthYearFilteredBills.filter(b => b.status === 'pending').length,
+    overdue: monthYearFilteredBills.filter(b => b.status === 'overdue').length,
+    totalElectricity: monthYearFilteredBills.reduce((sum, b) => sum + (b.electricityCost || 0), 0),
+    totalWater: monthYearFilteredBills.reduce((sum, b) => sum + (b.waterCost || 0), 0),
+    totalInternet: monthYearFilteredBills.reduce((sum, b) => sum + (b.internetCost || 0), 0),
+    totalRevenue: monthYearFilteredBills.reduce((sum, b) => sum + (b.totalAmount || 0), 0),
   };
 
   const statisticsCards = [
     {
       label: 'Electricity',
       value: formatCurrency(stats.totalElectricity),
-      detail: 'This month',
+      detail: `${monthNames[selectedMonth]} ${selectedYear}`,
       icon: Zap
     },
     {
       label: 'Water',
       value: formatCurrency(stats.totalWater),
-      detail: 'This month',
+      detail: `${monthNames[selectedMonth]} ${selectedYear}`,
       icon: Droplet
     },
     {
       label: 'Internet',
       value: formatCurrency(stats.totalInternet),
-      detail: 'This month',
+      detail: `${monthNames[selectedMonth]} ${selectedYear}`,
       icon: Wifi
     }
   ];
 
   const filterButtons = [
-    { id: 'all' as const, label: 'All', count: utilityBills.length },
+    { id: 'all' as const, label: 'All', count: monthYearFilteredBills.length },
     { id: 'paid' as const, label: 'Paid', count: stats.paid },
     { id: 'pending' as const, label: 'Pending', count: stats.pending },
     { id: 'overdue' as const, label: 'Overdue', count: stats.overdue }
@@ -216,6 +253,62 @@ export function UtilitiesView() {
         buttonLabel="Add Utility Bill"
         onButtonClick={() => setViewMode('add')}
       />
+
+      {/* Month/Year Filter */}
+      <div className="grid grid-cols-2 gap-5 mb-8">
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-2">Select month</label>
+          <div className="relative" ref={monthDropdownRef}>
+            <button
+              type="button"
+              className="input-default text-sm flex items-center justify-between w-full"
+              onClick={() => setIsMonthOpen(!isMonthOpen)}
+            >
+              {monthNames[selectedMonth]}
+              <ChevronDown className={`size-4 text-text-secondary transition-transform ${isMonthOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isMonthOpen && (
+              <div className="absolute z-10 bg-bg-white border border-border-default rounded-sm shadow-lg w-full mt-1 overflow-hidden max-h-60 overflow-y-auto scrollbar-hide">
+                {monthNames.map((month, index) => (
+                  <div 
+                    key={month}
+                    className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors ${selectedMonth === index ? 'bg-bg-hover' : ''}`}
+                    onClick={() => { setSelectedMonth(index); setIsMonthOpen(false); }}
+                  >
+                    {month}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-2">Select year</label>
+          <div className="relative" ref={yearDropdownRef}>
+            <button
+              type="button"
+              className="input-default text-sm flex items-center justify-between w-full"
+              onClick={() => setIsYearOpen(!isYearOpen)}
+            >
+              {selectedYear}
+              <ChevronDown className={`size-4 text-text-secondary transition-transform ${isYearOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isYearOpen && (
+              <div className="absolute z-10 bg-bg-white border border-border-default rounded-sm shadow-lg w-full mt-1 overflow-hidden max-h-60 overflow-y-auto scrollbar-hide">
+                {years.map((year) => (
+                  <div 
+                    key={year}
+                    className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm text-text-primary transition-colors ${selectedYear === year ? 'bg-bg-hover' : ''}`}
+                    onClick={() => { setSelectedYear(year); setIsYearOpen(false); }}
+                  >
+                    {year}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Statistics Cards */}
       <StatsGrid stats={statisticsCards} />

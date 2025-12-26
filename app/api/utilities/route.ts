@@ -39,12 +39,21 @@ export async function GET(request: NextRequest) {
         status: true,
         paidDate: true,
         householdId: true,
-        household: { select: { id: true, unit: true, ownerName: true, phone: true } }
+        household: { select: { id: true, unit: true, owner: { select: { name: true } }, phone: true } }
       },
       orderBy: { dueDate: 'desc' }
     })
 
-    return NextResponse.json(utilityBills, {
+    // Add computed ownerName for backward compatibility
+    const billsWithOwnerName = utilityBills.map(b => ({
+      ...b,
+      household: {
+        ...b.household,
+        ownerName: b.household?.owner?.name || 'No owner'
+      }
+    }))
+
+    return NextResponse.json(billsWithOwnerName, {
       headers: {
         'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59'
       }

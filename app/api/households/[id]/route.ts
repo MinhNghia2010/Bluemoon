@@ -16,13 +16,17 @@ export async function GET(
       prisma.household.findUnique({
         where: { id },
         select: {
-          id: true, unit: true, ownerName: true, area: true, floor: true,
+          id: true, unit: true, ownerId: true,
+          owner: {
+            select: { id: true, name: true, cccd: true, profilePic: true }
+          },
+          area: true, floor: true,
           moveInDate: true, phone: true, email: true, status: true, balance: true
         }
       }),
       prisma.householdMember.findMany({
         where: { householdId: id },
-        select: { id: true, name: true, dateOfBirth: true, cccd: true, profilePic: true }
+        select: { id: true, name: true, dateOfBirth: true, cccd: true, profilePic: true, status: true, residenceType: true, relationToOwner: true }
       }),
       prisma.payment.findMany({
         where: { householdId: id },
@@ -48,11 +52,12 @@ export async function GET(
 
     return NextResponse.json({
       ...household,
+      ownerName: household.owner?.name || 'No owner',
       members,
       payments,
       parkingSlots,
       utilityBills,
-      residents: members.length
+      residents: members.filter(m => m.status === 'living').length
     })
   } catch (error) {
     console.error('Get household error:', error)
@@ -72,10 +77,91 @@ export async function PUT(
     const { id } = await params
     const data = await request.json()
 
+    // Get current household state
+    const currentHousehold = await prisma.household.findUnique({
+      where: { id },
+      select: { 
+        ownerId: true,
+        owner: { select: { id: true, status: true } }
+      }
+    })
+
+    if (!currentHousehold) {
+      return NextResponse.json({ error: 'Household not found' }, { status: 404 })
+    }
+
+    // Check if owner is being removed (set to null)
+    const isRemovingOwner = data.ownerId === null && currentHousehold.ownerId !== null
+    
+    // If removing owner, check if owner moved out but still owns (status = moved_out but relation maintained)
+    // In this case, we don't cascade delete
+    const ownerMovedOutButStillOwns = currentHousehold.owner?.status === 'moved_out'
+    
+    if (isRemovingOwner && !ownerMovedOutButStillOwns) {
+      // Owner is being completely removed - cascade delete related data
+      // Keep temporary residents, delete permanent residents and all payments/vehicles
+      await prisma.$transaction(async (tx) => {
+        // Delete all payments for this household
+        await tx.payment.deleteMany({
+          where: { householdId: id }
+        })
+        
+        // Release all parking slots (set householdId to null)
+        await tx.parkingSlot.updateMany({
+          where: { householdId: id },
+          data: { householdId: null, licensePlate: null, status: 'available' }
+        })
+        
+        // Delete utility bills
+        await tx.utilityBill.deleteMany({
+          where: { householdId: id }
+        })
+        
+        // Remove permanent residents from household (keep temporary ones)
+        await tx.householdMember.updateMany({
+          where: { 
+            householdId: id,
+            residenceType: 'permanent'
+          },
+          data: { 
+            householdId: null,
+            status: 'moved_out',
+            moveOutDate: new Date()
+          }
+        })
+        
+        // Reset household balance
+        await tx.household.update({
+          where: { id },
+          data: { 
+            ownerId: null,
+            balance: 0
+          }
+        })
+      })
+      
+      // Fetch updated household
+      const updatedHousehold = await prisma.household.findUnique({
+        where: { id },
+        include: {
+          members: { where: { status: 'living' } },
+          owner: { select: { id: true, name: true } }
+        }
+      })
+      
+      return NextResponse.json({ 
+        ...updatedHousehold, 
+        ownerName: 'No owner',
+        residents: updatedHousehold?.members.length || 0,
+        cascadeDeleted: true,
+        message: 'Owner removed. All payments, vehicles, and permanent residents have been removed from this household.'
+      })
+    }
+
     const household = await prisma.household.update({
       where: { id },
       data: {
-        ownerName: data.ownerName,
+        ownerId: data.ownerId !== undefined ? (data.ownerId || null) : undefined,
         area: data.area !== undefined ? (data.area ? parseFloat(data.area) : null) : undefined,
         floor: data.floor !== undefined ? (data.floor ? parseInt(data.floor) : null) : undefined,
         moveInDate: data.moveInDate !== undefined ? (data.moveInDate ? new Date(data.moveInDate) : null) : undefined,
@@ -84,11 +170,20 @@ export async function PUT(
         status: data.status
       },
       include: {
-        members: true
+        members: {
+          where: { status: 'living' }
+        },
+        owner: {
+          select: { id: true, name: true }
+        }
       }
     })
 
-    return NextResponse.json({ ...household, residents: household.members.length })
+    return NextResponse.json({ 
+      ...household, 
+      ownerName: household.owner?.name || 'No owner',
+      residents: household.members.length 
+    })
   } catch (error) {
     console.error('Update household error:', error)
     return NextResponse.json(

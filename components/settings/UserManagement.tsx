@@ -344,8 +344,9 @@ export function UserManagement() {
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-[#5030e5] text-white rounded-[6px] hover:bg-[#4024c4] transition-colors"
+              className="px-6 py-2 bg-[#5030e5] text-white rounded-[6px] hover:bg-[#4024c4] transition-colors flex items-center gap-2"
             >
+              <Plus className="w-4 h-4" />
               {editingUser ? 'Update User' : 'Add User'}
             </button>
           </div>

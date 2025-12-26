@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, AlertTriangle, Plus, UserMinus, Edit2, Building2, CalendarIcon, Maximize2, Layers, Phone, Mail, Check, X } from 'lucide-react';
+import { Trash2, AlertTriangle, Plus, UserMinus, Edit2, Building2, CalendarIcon, Maximize2, Layers, Phone, Mail, Check, X, Clock, Plane, Home, UserX } from 'lucide-react';
 import { Modal } from '../shared/Modal';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -21,6 +21,14 @@ interface HouseholdMember {
   dateOfBirth: string;
   cccd: string;
   profilePic?: string | null;
+  residenceType: 'permanent' | 'temporary';
+  relationToOwner?: string | null;
+  isOwner?: boolean;
+  status: 'living' | 'moved_out' | 'deceased';
+  moveInDate: string | null;
+  moveOutDate: string | null;
+  note: string | null;
+  isTemporarilyAway?: boolean;
 }
 
 // Simplified member type for household prop (modal fetches full data separately)
@@ -60,6 +68,47 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<HouseholdMember | null>(null);
   const [showRemoveMemberAlert, setShowRemoveMemberAlert] = useState(false);
+
+  // Helper function to get residence status badge
+  const getResidenceStatusBadge = (member: HouseholdMember) => {
+    // If moved out, show moved out badge
+    if (member.status === 'moved_out') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+          <UserX className="w-3 h-3" />
+          Moved Out
+        </span>
+      );
+    }
+
+    // If temporarily away
+    if (member.isTemporarilyAway) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+          <Plane className="w-3 h-3" />
+          Away
+        </span>
+      );
+    }
+
+    // Temporary resident
+    if (member.residenceType === 'temporary') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+          <Clock className="w-3 h-3" />
+          Temporary
+        </span>
+      );
+    }
+
+    // Permanent resident (default)
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+        <Home className="w-3 h-3" />
+        Permanent
+      </span>
+    );
+  };
   
   useEffect(() => {
     if (household?.id) {
@@ -261,7 +310,7 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
           ) : (
             <div className="h-[180px] overflow-y-auto space-y-3 pr-1 scrollbar-hide">
               {members.map(member => (
-                <div key={member.id} className="flex items-center justify-between p-4 bg-bg-white rounded-xl border border-border-light shadow-sm hover:shadow-md transition-shadow">
+                <div key={member.id} className={`flex items-center justify-between p-4 bg-bg-white rounded-xl border border-border-light shadow-sm hover:shadow-md transition-shadow ${member.status === 'moved_out' ? 'opacity-60' : ''}`}>
                   <div className="flex items-center gap-4">
                     {member.profilePic ? (
                       <img 
@@ -277,8 +326,21 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
                       </div>
                     )}
                     <div>
-                      <p className="font-semibold text-text-primary text-base">{member.name}</p>
-                      <div className="flex gap-6 text-sm mt-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold text-text-primary text-base">{member.name}</p>
+                        {member.isOwner && (
+                          <span className="text-xs text-white bg-purple-500 px-2 py-0.5 rounded font-medium">
+                            Owner
+                          </span>
+                        )}
+                        {!member.isOwner && member.relationToOwner && (
+                          <span className="text-xs text-text-secondary bg-bg-hover px-2 py-0.5 rounded capitalize">
+                            {member.relationToOwner}
+                          </span>
+                        )}
+                        {getResidenceStatusBadge(member)}
+                      </div>
+                      <div className="flex gap-6 text-sm">
                         <div>
                           <span className="text-xs text-text-secondary">Date of Birth</span>
                           <p className="text-text-primary font-medium">{format(new Date(member.dateOfBirth), 'MMM d, yyyy')}</p>
@@ -538,7 +600,8 @@ function AddMemberModal({ isOpen, householdId, householdUnit, onClose, onSuccess
           <button type="button" onClick={onClose} className="btn-secondary flex-1">
             Cancel
           </button>
-          <button type="submit" disabled={loading} className="btn-primary flex-1">
+          <button type="submit" disabled={loading} className="btn-primary flex-1 flex items-center justify-center gap-2">
+            <Plus className="w-4 h-4" />
             {loading ? 'Adding...' : 'Add Member'}
           </button>
         </div>

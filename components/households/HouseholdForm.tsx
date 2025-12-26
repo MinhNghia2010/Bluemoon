@@ -1,14 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { Save, Check, X } from 'lucide-react';
+import { Plus, Check, X, ChevronDown, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { DatePickerInput } from '../shared/DatePickerInput';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+
+interface HouseholdMember {
+  id: string;
+  name: string;
+  profilePic?: string | null;
+}
 
 interface Household {
   id: string;
   unit: string;
   ownerName: string;
+  ownerId?: string | null;
+  owner?: HouseholdMember | null;
   residents: number;
   area?: number | null;
   floor?: number | null;
@@ -17,32 +26,49 @@ interface Household {
   balance: number;
   phone: string;
   email: string;
+  members?: HouseholdMember[];
 }
 
 interface HouseholdFormProps {
   household: Household | null;
-  onSave: (data: Partial<Household>) => void;
+  onSave: (data: Partial<Household> & { ownerId?: string | null }) => void;
   onCancel: () => void;
 }
 
 export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProps) {
   const [formData, setFormData] = useState({
     unit: '',
-    ownerName: '',
+    ownerId: null as string | null,
     area: '',
     floor: '',
     moveInDate: undefined as Date | undefined,
     phone: '',
     email: ''
   });
+  const [members, setMembers] = useState<HouseholdMember[]>([]);
+  const [ownerDropdownOpen, setOwnerDropdownOpen] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Fetch members when editing a household
+  useEffect(() => {
+    if (household?.id) {
+      fetch(`/api/members?householdId=${household.id}`)
+        .then(res => res.json())
+        .then(data => {
+          // Filter to only living members
+          const livingMembers = data.filter((m: any) => m.status === 'living');
+          setMembers(livingMembers);
+        })
+        .catch(err => console.error('Failed to fetch members:', err));
+    }
+  }, [household?.id]);
 
   useEffect(() => {
     if (household) {
       setFormData({
         unit: household.unit,
-        ownerName: household.ownerName,
+        ownerId: household.ownerId || null,
         area: household.area?.toString() || '',
         floor: household.floor?.toString() || '',
         moveInDate: household.moveInDate ? new Date(household.moveInDate) : undefined,
@@ -57,9 +83,6 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
     
     if (!formData.unit.trim()) {
       newErrors.unit = 'Unit number is required';
-    }
-    if (!formData.ownerName.trim()) {
-      newErrors.ownerName = 'Owner name is required';
     }
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
@@ -78,10 +101,13 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
     e.preventDefault();
     if (validateForm()) {
       onSave({
-        ...formData,
+        unit: formData.unit,
+        ownerId: formData.ownerId,
         area: formData.area ? parseFloat(formData.area) : null,
         floor: formData.floor ? parseInt(formData.floor) : null,
-        moveInDate: formData.moveInDate ? format(formData.moveInDate, 'yyyy-MM-dd') : null
+        moveInDate: formData.moveInDate ? format(formData.moveInDate, 'yyyy-MM-dd') : null,
+        phone: formData.phone,
+        email: formData.email
       });
     }
   };
@@ -96,6 +122,8 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
+
+  const selectedOwner = members.find(m => m.id === formData.ownerId);
 
   return (
     <div>
@@ -140,25 +168,59 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">Owner Name *</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="ownerName"
-                  value={formData.ownerName}
-                  onChange={handleChange}
-                  placeholder="Full name"
-                  className={`input-default text-sm pr-10 ${formData.ownerName.trim().length >= 2 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.ownerName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                />
-                {formData.ownerName.trim().length >= 2 && (
-                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
-                )}
-                {formData.ownerName.trim().length < 2 && errors.ownerName && (
-                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
-                )}
-              </div>
-              {errors.ownerName && (
-                <p className="mt-0.5 text-sm text-red-500">{errors.ownerName}</p>
+              <label className="block text-sm font-medium text-text-primary mb-2">Owner {household ? '' : '(Add members first)'}</label>
+              {household ? (
+                <Popover open={ownerDropdownOpen} onOpenChange={setOwnerDropdownOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={`input-default text-sm flex items-center justify-between w-full ${selectedOwner ? 'border-green-500' : ''}`}
+                    >
+                      <span className={selectedOwner ? 'text-text-primary' : 'text-text-secondary'}>
+                        {selectedOwner ? selectedOwner.name : (members.length > 0 ? 'Select owner' : 'No members available')}
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-text-secondary" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-bg-white border-border-light" align="start">
+                    <div className="max-h-[250px] overflow-y-auto scrollbar-hide">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, ownerId: null }));
+                          setOwnerDropdownOpen(false);
+                        }}
+                        className={`w-full px-4 py-3 text-left text-sm hover:bg-bg-hover transition-colors border-b border-border-light ${!formData.ownerId ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-secondary'}`}
+                      >
+                        No owner
+                      </button>
+                      {members.map(member => (
+                        <button
+                          key={member.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, ownerId: member.id }));
+                            setOwnerDropdownOpen(false);
+                          }}
+                          className={`w-full px-4 py-3 text-left text-sm hover:bg-bg-hover transition-colors border-b border-border-light last:border-b-0 flex items-center gap-3 ${formData.ownerId === member.id ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'}`}
+                        >
+                          {member.profilePic ? (
+                            <img src={member.profilePic} alt={member.name} className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-brand-primary/20 flex items-center justify-center">
+                              <User className="w-4 h-4 text-brand-primary" />
+                            </div>
+                          )}
+                          <span>{member.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <p className="text-sm text-text-secondary italic py-3">
+                  Create the household first, then add members and set an owner.
+                </p>
               )}
             </div>
 
@@ -284,7 +346,7 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
             type="submit"
             className="btn-primary flex items-center gap-2"
           >
-            <Save className="w-4 h-4" />
+            <Plus className="w-4 h-4" />
             {household ? 'Update Household' : 'Add Household'}
           </button>
         </div>

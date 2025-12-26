@@ -26,7 +26,6 @@ model User {
 model Household {
   id         String    @id @default(cuid())
   unit       String    @unique // e.g., "101", "102"
-  ownerName  String
   area       Float?    // Area in m²
   floor      Int?      // Floor number
   moveInDate DateTime? // Move-in date
@@ -37,29 +36,96 @@ model Household {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
+  // Owner relation - links to HouseholdMember
+  ownerId    String?   @unique // Reference to the owner member (one member can only own one household)
+  owner      HouseholdMember? @relation("HouseholdOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
   // Relations
-  members      HouseholdMember[]
+  members      HouseholdMember[] @relation("HouseholdMembers")
   payments     Payment[]
   parkingSlots ParkingSlot[]
   utilityBills UtilityBill[]
 
   // Indexes for faster queries
   @@index([status])
+  @@index([ownerId])
 }
 
 // Household Member model - residents in a household
 model HouseholdMember {
-  id          String    @id @default(cuid())
-  name        String    // Full name
-  dateOfBirth DateTime  // Date of birth
-  cccd        String    @unique // Căn cước công dân (National ID)
-  profilePic  String?   // Optional profile picture URL
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  name            String    // Full name
+  dateOfBirth     DateTime  // Date of birth
+  cccd            String    @unique // Căn cước công dân (National ID)
+  profilePic      String?   // Optional profile picture URL
+  
+  // Residence information
+  residenceType   String    @default("permanent") // permanent, temporary
+  relationToOwner String?   // Relation to the household owner (self, spouse, child, parent, etc.)
+  status          String    @default("living") // living, moved_out, deceased
+  moveInDate      DateTime? // When they moved into this household
+  moveOutDate     DateTime? // When they left (null if still living)
+  note            String?   // Additional notes
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  // Relations - householdId is required (every resident must belong to a household)
-  householdId String
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  // Relations - householdId can be null for people who moved out
+  householdId String?
+  household   Household? @relation("HouseholdMembers", fields: [householdId], references: [id], onDelete: SetNull)
+
+  // Owner of households (a member can be owner of one household)
+  ownedHousehold Household? @relation("HouseholdOwner")
+
+  // Temporary absence records (when they're temporarily away)
+  temporaryAbsences TemporaryAbsence[]
+  
+  // Temporary residence records (for temporary residents)
+  temporaryResidences TemporaryResidence[]
+  
+  @@index([status])
+  @@index([residenceType])
+}
+
+// Temporary Absence model (Tạm vắng) - for residents temporarily away from the apartment
+model TemporaryAbsence {
+  id                  String    @id @default(cuid())
+  registrationNumber  String?   // Mã giấy tạm vắng
+  destination         String?   // Nơi đến
+  startDate           DateTime  // Ngày bắt đầu tạm vắng
+  endDate             DateTime? // Ngày kết thúc (null if ongoing)
+  reason              String?   // Lý do tạm vắng
+  status              String    @default("active") // active, returned, cancelled
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  memberId String
+  member   HouseholdMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([status])
+}
+
+// Temporary Residence model (Tạm trú) - for people temporarily residing in the apartment
+model TemporaryResidence {
+  id                  String    @id @default(cuid())
+  registrationNumber  String?   // Mã giấy tạm trú
+  registrantPhone     String?   // Số điện thoại người đăng ký
+  currentAddress      String?   // Địa chỉ thường trú
+  startDate           DateTime  // Ngày bắt đầu tạm trú
+  endDate             DateTime? // Ngày kết thúc (null if ongoing)
+  reason              String?   // Lý do tạm trú
+  status              String    @default("active") // active, expired, cancelled
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  memberId String
+  member   HouseholdMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([status])
 }
 
 // Fee Category model - types of fees
