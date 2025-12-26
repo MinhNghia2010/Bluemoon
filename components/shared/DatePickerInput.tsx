@@ -289,11 +289,12 @@ export function DatePickerInput({
           </button>
         </PopoverTrigger>
         <PopoverContent 
-          className="w-auto p-0 bg-bg-white border-border-light" 
+          className="w-auto p-0 bg-bg-white border-border-light z-[100]" 
           align="end"
           side="bottom"
           sideOffset={8}
-          avoidCollisions={false}
+          avoidCollisions={true}
+          collisionPadding={16}
         >
           <Calendar
             mode="single"

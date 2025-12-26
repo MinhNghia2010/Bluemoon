@@ -11,10 +11,29 @@ import { CollectionRateChart } from './statistics/CollectionRateChart';
 import { statisticsApi } from '@/lib/api';
 import { toast } from 'sonner';
 
+// Get initial state from localStorage
+const getInitialState = () => {
+  if (typeof window === 'undefined') return null;
+  const saved = localStorage.getItem('bluemoon-statistics-state');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {}
+  }
+  return null;
+};
+
 export function StatisticsView() {
+  const initialState = getInitialState();
+  
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'fees' | 'utilities' | 'parking'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'fees' | 'utilities' | 'parking'>(initialState?.activeTab || 'overview');
+
+  // Save view state to localStorage
+  useEffect(() => {
+    localStorage.setItem('bluemoon-statistics-state', JSON.stringify({ activeTab }));
+  }, [activeTab]);
 
   const fetchStatistics = async () => {
     try {

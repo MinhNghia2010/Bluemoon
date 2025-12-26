@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react';
-import { Plus, Check, X, ChevronDown, User } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Check, X, ChevronDown, User, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { DatePickerInput } from '../shared/DatePickerInput';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -36,6 +36,13 @@ interface HouseholdFormProps {
 }
 
 export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProps) {
+  // Extract floor from unit (e.g., "301" -> floor 3)
+  const getFloorFromUnit = (unit: string) => {
+    if (!unit || unit.length < 1) return '';
+    const firstChar = unit.charAt(0);
+    return /\d/.test(firstChar) ? firstChar : '';
+  };
+
   const [formData, setFormData] = useState({
     unit: '',
     ownerId: null as string | null,
@@ -47,6 +54,8 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
   });
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [ownerDropdownOpen, setOwnerDropdownOpen] = useState(false);
+  const [unitDuplicateError, setUnitDuplicateError] = useState<string | null>(null);
+  const [isCheckingUnit, setIsCheckingUnit] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -64,13 +73,49 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
     }
   }, [household?.id]);
 
+  // Check for duplicate unit number
+  const checkDuplicateUnit = useCallback(async (unit: string) => {
+    if (!unit.trim()) {
+      setUnitDuplicateError(null);
+      return;
+    }
+
+    setIsCheckingUnit(true);
+    try {
+      const url = household?.id 
+        ? `/api/households?checkUnit=${encodeURIComponent(unit)}&excludeId=${household.id}`
+        : `/api/households?checkUnit=${encodeURIComponent(unit)}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists) {
+          setUnitDuplicateError('This room number already exists');
+        } else {
+          setUnitDuplicateError(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check unit:', error);
+    } finally {
+      setIsCheckingUnit(false);
+    }
+  }, [household?.id]);
+
+  // Debounce unit check
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkDuplicateUnit(formData.unit);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [formData.unit, checkDuplicateUnit]);
+
   useEffect(() => {
     if (household) {
       setFormData({
         unit: household.unit,
         ownerId: household.ownerId || null,
         area: household.area?.toString() || '',
-        floor: household.floor?.toString() || '',
+        floor: household.floor?.toString() || getFloorFromUnit(household.unit),
         moveInDate: household.moveInDate ? new Date(household.moveInDate) : undefined,
         phone: household.phone,
         email: household.email
@@ -78,11 +123,31 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
     }
   }, [household]);
 
+  // Handle unit change - auto-fill floor
+  const handleUnitChange = (value: string) => {
+    const floor = getFloorFromUnit(value);
+    setFormData(prev => ({
+      ...prev,
+      unit: value,
+      floor: floor
+    }));
+    if (errors.unit) {
+      setErrors(prev => ({ ...prev, unit: '' }));
+    }
+  };
+
+  // Validate unit format (X00 where X is floor digit)
+  const isValidUnitFormat = (unit: string) => {
+    return /^\d{3}$/.test(unit); // 3-digit format like 101, 301, etc.
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
     if (!formData.unit.trim()) {
       newErrors.unit = 'Unit number is required';
+    } else if (!isValidUnitFormat(formData.unit)) {
+      newErrors.unit = 'Unit must be 3 digits (e.g., 101, 301)';
     }
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
@@ -99,17 +164,19 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      onSave({
-        unit: formData.unit,
-        ownerId: formData.ownerId,
-        area: formData.area ? parseFloat(formData.area) : null,
-        floor: formData.floor ? parseInt(formData.floor) : null,
-        moveInDate: formData.moveInDate ? format(formData.moveInDate, 'yyyy-MM-dd') : null,
-        phone: formData.phone,
-        email: formData.email
-      });
+    if (!validateForm()) return;
+    if (unitDuplicateError) {
+      return; // Don't submit if there's a duplicate error
     }
+    onSave({
+      unit: formData.unit,
+      ownerId: formData.ownerId,
+      area: formData.area ? parseFloat(formData.area) : null,
+      floor: formData.floor ? parseInt(formData.floor) : null,
+      moveInDate: formData.moveInDate ? format(formData.moveInDate, 'yyyy-MM-dd') : null,
+      phone: formData.phone,
+      email: formData.email
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,25 +212,38 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
             <h3 className="font-semibold text-text-primary text-lg">Household Details</h3>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2">Unit Number *</label>
+              <label className="block text-sm font-medium text-text-primary mb-2">Unit Number * <span className="text-text-secondary font-normal">(Format: X00)</span></label>
               <div className="relative">
                 <input
                   type="text"
                   name="unit"
                   value={formData.unit}
-                  onChange={handleChange}
-                  placeholder="e.g., 101"
-                  className={`input-default text-sm pr-10 ${formData.unit.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.unit ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  onChange={(e) => handleUnitChange(e.target.value)}
+                  placeholder="e.g., 101, 301"
+                  maxLength={3}
+                  className={`input-default text-sm pr-10 ${
+                    unitDuplicateError 
+                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                      : isValidUnitFormat(formData.unit) && !unitDuplicateError
+                        ? 'border-green-500 focus:border-green-500 focus:ring-green-500' 
+                        : errors.unit 
+                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                          : ''
+                  }`}
                 />
-                {formData.unit.trim().length > 0 && (
+                {isCheckingUnit && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
+                )}
+                {!isCheckingUnit && isValidUnitFormat(formData.unit) && !unitDuplicateError && (
                   <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
                 )}
-                {formData.unit.trim().length === 0 && errors.unit && (
-                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                {!isCheckingUnit && (unitDuplicateError || (formData.unit && !isValidUnitFormat(formData.unit))) && (
+                  <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
                 )}
               </div>
-              {errors.unit && (
-                <p className="mt-0.5 text-sm text-red-500">{errors.unit}</p>
+              {unitDuplicateError && <p className="text-xs text-red-500 mt-2">{unitDuplicateError}</p>}
+              {!unitDuplicateError && errors.unit && (
+                <p className="mt-2 text-sm text-red-500">{errors.unit}</p>
               )}
             </div>
 
@@ -246,18 +326,15 @@ export function HouseholdForm({ household, onSave, onCancel }: HouseholdFormProp
                 <label className="block text-sm font-medium text-text-primary mb-2">Floor</label>
                 <div className="relative">
                   <input
-                    type="number"
+                    type="text"
                     name="floor"
-                    value={formData.floor}
-                    onChange={handleChange}
-                    placeholder="e.g., 1"
-                    min="1"
-                    className={`input-default text-sm pr-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${formData.floor && parseInt(formData.floor) > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : ''}`}
+                    value={formData.floor ? `Floor ${formData.floor}` : ''}
+                    readOnly
+                    placeholder="Auto-filled from room"
+                    className="input-default text-sm bg-bg-hover cursor-not-allowed"
                   />
-                  {formData.floor && parseInt(formData.floor) > 0 && (
-                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
-                  )}
                 </div>
+                <p className="text-xs text-text-secondary mt-1">Auto-filled from room number</p>
               </div>
             </div>
 

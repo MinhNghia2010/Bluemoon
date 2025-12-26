@@ -62,22 +62,60 @@ interface Household {
   ownerId?: string | null
 }
 
+// Get initial state from localStorage
+const getInitialState = () => {
+  if (typeof window === 'undefined') return null;
+  const saved = localStorage.getItem('bluemoon-demography-state');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {}
+  }
+  return null;
+};
+
 export function DemographyView() {
+  const initialState = getInitialState();
+  
   const [members, setMembers] = useState<HouseholdMember[]>([])
   const [households, setHouseholds] = useState<Household[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showForm, setShowForm] = useState(false)
+  const [searchTerm, setSearchTerm] = useState(initialState?.searchTerm || '')
+  const [showForm, setShowForm] = useState(initialState?.showForm || false)
   const [editingMember, setEditingMember] = useState<HouseholdMember | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [memberToDelete, setMemberToDelete] = useState<HouseholdMember | null>(null)
-  const [statusFilter, setStatusFilter] = useState<'all' | 'living' | 'moved_out'>('all')
-  const [residenceTypeFilter, setResidenceTypeFilter] = useState<'all' | 'permanent' | 'temporary'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'living' | 'moved_out'>(initialState?.statusFilter || 'all')
+  const [residenceTypeFilter, setResidenceTypeFilter] = useState<'all' | 'permanent' | 'temporary'>(initialState?.residenceTypeFilter || 'all')
+  const [pendingMemberId, setPendingMemberId] = useState<string | null>(initialState?.editingMemberId || null)
   
   // Owner transfer state
   const [showOwnerTransferDialog, setShowOwnerTransferDialog] = useState(false)
   const [pendingMoveOutData, setPendingMoveOutData] = useState<any>(null)
   const [selectedNewOwner, setSelectedNewOwner] = useState<string>('')
+
+  // Save view state to localStorage
+  useEffect(() => {
+    const state = {
+      showForm,
+      editingMemberId: editingMember?.id || null,
+      statusFilter,
+      residenceTypeFilter,
+      searchTerm
+    };
+    localStorage.setItem('bluemoon-demography-state', JSON.stringify(state));
+  }, [showForm, editingMember?.id, statusFilter, residenceTypeFilter, searchTerm]);
+
+  // Restore editing member after data loads
+  useEffect(() => {
+    if (pendingMemberId && members.length > 0) {
+      const member = members.find(m => m.id === pendingMemberId);
+      if (member) {
+        setEditingMember(member);
+      }
+      setPendingMemberId(null);
+    }
+  }, [members, pendingMemberId]);
   const [householdMembers, setHouseholdMembers] = useState<HouseholdMember[]>([])
 
   useEffect(() => {

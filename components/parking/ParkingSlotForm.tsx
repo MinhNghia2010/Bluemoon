@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Car, Bike, Motorbike, Check, X, Plus } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { ChevronDown, Car, Bike, Motorbike, Check, X, Plus, AlertCircle, User } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ParkingSlot } from '../ParkingView';
 
@@ -10,8 +10,15 @@ interface Member {
   name: string;
   cccd: string;
   householdId?: string | null;
-  household?: { unit: string; phone: string } | null;
+  household?: { id: string; unit: string; phone: string } | null;
 }
+
+// Vehicle pricing
+const VEHICLE_PRICES = {
+  car: 20,
+  motorcycle: 5,
+  bicycle: 0
+};
 
 interface ParkingSlotFormProps {
   slot: ParkingSlot | null;
@@ -26,19 +33,23 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
     ownerName: slot?.ownerName || '',
     vehicleType: slot?.vehicleType || 'car',
     licensePlate: slot?.licensePlate || '',
-    monthlyFee: slot?.monthlyFee?.toString() || '',
+    monthlyFee: slot?.monthlyFee?.toString() || VEHICLE_PRICES.car.toString(),
     status: slot?.status || 'active',
     phone: slot?.phone || '',
+    householdId: slot?.householdId || '',
+    memberId: '',
   });
 
   const [members, setMembers] = useState<Member[]>([]);
-  const [isOwnerOpen, setIsOwnerOpen] = useState(false);
+  const [isMemberOpen, setIsMemberOpen] = useState(false);
   const [isVehicleTypeOpen, setIsVehicleTypeOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [slotDuplicateError, setSlotDuplicateError] = useState<string | null>(null);
+  const [isCheckingSlot, setIsCheckingSlot] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const ownerRef = useRef<HTMLDivElement>(null);
+  const memberRef = useRef<HTMLDivElement>(null);
   const vehicleTypeRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +60,9 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
         const res = await fetch('/api/members');
         if (res.ok) {
           const data = await res.json();
-          setMembers(data);
+          // Filter only living members with households
+          const livingMembers = data.filter((m: Member) => m.householdId);
+          setMembers(livingMembers);
         }
       } catch (error) {
         console.error('Failed to fetch members:', error);
@@ -58,11 +71,47 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
     fetchMembers();
   }, []);
 
+  // Check for duplicate slot number
+  const checkDuplicateSlot = useCallback(async (slotNumber: string) => {
+    if (!slotNumber.trim()) {
+      setSlotDuplicateError(null);
+      return;
+    }
+
+    setIsCheckingSlot(true);
+    try {
+      const url = slot?.id 
+        ? `/api/parking?checkSlot=${encodeURIComponent(slotNumber)}&excludeId=${slot.id}`
+        : `/api/parking?checkSlot=${encodeURIComponent(slotNumber)}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists) {
+          setSlotDuplicateError('This slot number already exists');
+        } else {
+          setSlotDuplicateError(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check slot:', error);
+    } finally {
+      setIsCheckingSlot(false);
+    }
+  }, [slot?.id]);
+
+  // Debounce slot number check
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkDuplicateSlot(formData.slotNumber);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [formData.slotNumber, checkDuplicateSlot]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (ownerRef.current && !ownerRef.current.contains(event.target as Node)) {
-        setIsOwnerOpen(false);
+      if (memberRef.current && !memberRef.current.contains(event.target as Node)) {
+        setIsMemberOpen(false);
       }
       if (vehicleTypeRef.current && !vehicleTypeRef.current.contains(event.target as Node)) {
         setIsVehicleTypeOpen(false);
@@ -76,26 +125,33 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleOwnerSelect = (member: Member) => {
+  const handleMemberSelect = (member: Member) => {
     setFormData(prev => ({
       ...prev,
+      memberId: member.id,
       ownerName: member.name,
-      unit: member.household?.unit || prev.unit,
-      phone: member.household?.phone || prev.phone,
+      unit: member.household?.unit || '',
+      phone: member.household?.phone || '',
+      householdId: member.householdId || '',
     }));
-    setIsOwnerOpen(false);
-    if (errors.ownerName) {
-      setErrors(prev => ({ ...prev, ownerName: '' }));
+    setIsMemberOpen(false);
+    if (errors.memberId) {
+      setErrors(prev => ({ ...prev, memberId: '' }));
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+    if (slotDuplicateError) {
+      toast.error('Please fix the duplicate slot number error');
+      return;
+    }
 
     onSave({
       ...formData,
       monthlyFee: parseFloat(formData.monthlyFee),
+      householdId: formData.householdId || undefined,
     });
     
     if (slot) {
@@ -112,10 +168,48 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
     }
   };
 
+  // Handle vehicle type change - auto-update price
+  const handleVehicleTypeChange = (type: 'car' | 'motorcycle' | 'bicycle') => {
+    const price = VEHICLE_PRICES[type];
+    setFormData(prev => ({
+      ...prev,
+      vehicleType: type,
+      monthlyFee: price.toString()
+    }));
+    setIsVehicleTypeOpen(false);
+  };
+
+  // Handle slot number change with format validation A-000
+  const handleSlotNumberChange = (value: string) => {
+    // Auto-format to A-000 pattern
+    let formatted = value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    
+    // Auto-insert hyphen after first letter
+    if (formatted.length === 1 && /[A-Z]/.test(formatted)) {
+      formatted = formatted;
+    } else if (formatted.length === 2 && /^[A-Z][0-9]$/.test(formatted)) {
+      formatted = formatted.charAt(0) + '-' + formatted.charAt(1);
+    } else if (formatted.length > 1 && !formatted.includes('-') && /^[A-Z]/.test(formatted)) {
+      formatted = formatted.charAt(0) + '-' + formatted.slice(1);
+    }
+    
+    // Limit to A-000 format (max 5 chars)
+    if (formatted.length > 5) {
+      formatted = formatted.slice(0, 5);
+    }
+    
+    handleChange('slotNumber', formatted);
+  };
+
+  // Validate slot number format A-000
+  const isValidSlotFormat = (slot: string) => {
+    return /^[A-Z]-\d{3}$/.test(slot);
+  };
+
   const vehicleTypes = [
-    { value: 'car', label: 'Car', icon: Car },
-    { value: 'motorcycle', label: 'Motorcycle', icon: Motorbike },
-    { value: 'bicycle', label: 'Bicycle', icon: Bike },
+    { value: 'car', label: 'Car', icon: Car, price: VEHICLE_PRICES.car },
+    { value: 'motorcycle', label: 'Motorcycle', icon: Motorbike, price: VEHICLE_PRICES.motorcycle },
+    { value: 'bicycle', label: 'Bicycle', icon: Bike, price: VEHICLE_PRICES.bicycle },
   ];
 
   const statusOptions = [
@@ -143,15 +237,15 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.slotNumber.trim()) newErrors.slotNumber = 'Slot number is required';
-    if (!formData.unit.trim()) newErrors.unit = 'Apartment unit is required';
-    if (!formData.ownerName.trim()) newErrors.ownerName = 'Owner name is required';
-    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
-
-    const fee = parseFloat(formData.monthlyFee);
-    if (!formData.monthlyFee || isNaN(fee) || fee <= 0) {
-      newErrors.monthlyFee = 'Monthly fee must be greater than 0';
+    if (!formData.slotNumber.trim()) {
+      newErrors.slotNumber = 'Slot number is required';
+    } else if (!isValidSlotFormat(formData.slotNumber)) {
+      newErrors.slotNumber = 'Slot must be in format A-000 (e.g., A-001)';
     }
+    if (!formData.memberId && !formData.householdId) {
+      newErrors.memberId = 'Vehicle owner is required';
+    }
+    if (!formData.vehicleType) newErrors.vehicleType = 'Vehicle type is required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -172,126 +266,119 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
       {/* Form */}
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Apartment / Owner Column */}
-          <div className="bg-bg-white rounded-[16px] p-8 shadow-lg border border-border-light space-y-5">
-            <h3 className="font-semibold text-text-primary text-lg">Apartment & Owner</h3>
+          {/* Slot & Owner Column */}
+          <div className="bg-bg-white rounded-2xl p-8 shadow-lg border border-border-light space-y-5">
+            <h3 className="font-semibold text-text-primary text-lg">Slot & Owner</h3>
 
             <div>
-              <label className="text-sm font-medium text-text-primary mb-2 block">Slot Number *</label>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Slot Number * <span className="text-text-secondary font-normal">(Format: A-000)</span></label>
               <div className="relative">
                 <input
                   type="text"
                   value={formData.slotNumber}
-                  onChange={(e) => handleChange('slotNumber', e.target.value)}
-                  className={`input-default text-sm pr-10 ${formData.slotNumber.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.slotNumber ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="e.g., P-A01"
+                  onChange={(e) => handleSlotNumberChange(e.target.value)}
+                  className={`input-default text-sm pr-10 ${
+                    slotDuplicateError 
+                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                      : isValidSlotFormat(formData.slotNumber) 
+                        ? 'border-green-500 focus:border-green-500 focus:ring-green-500' 
+                        : errors.slotNumber 
+                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                          : ''
+                  }`}
+                  placeholder="e.g., A-001"
                   required
                 />
-                {formData.slotNumber.trim().length > 0 && (
+                {isCheckingSlot && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
+                )}
+                {!isCheckingSlot && isValidSlotFormat(formData.slotNumber) && !slotDuplicateError && (
                   <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
                 )}
-                {formData.slotNumber.trim().length === 0 && errors.slotNumber && (
-                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                {!isCheckingSlot && (slotDuplicateError || (formData.slotNumber && !isValidSlotFormat(formData.slotNumber))) && (
+                  <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
                 )}
               </div>
-              {errors.slotNumber && <p className="text-xs text-red-500 mt-0.5">{errors.slotNumber}</p>}
+              {slotDuplicateError && <p className="text-xs text-red-500 mt-2">{slotDuplicateError}</p>}
+              {!slotDuplicateError && errors.slotNumber && <p className="text-xs text-red-500 mt-2">{errors.slotNumber}</p>}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-text-primary mb-2 block">Vehicle Owner (Resident) *</label>
-              <div className="relative" ref={ownerRef}>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Vehicle Owner *</label>
+              <div className="relative" ref={memberRef}>
                 <button
                   type="button"
-                  className={`input-default text-sm flex items-center justify-between ${formData.ownerName ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.ownerName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                  onClick={() => setIsOwnerOpen(!isOwnerOpen)}
+                  className={`input-default text-sm flex items-center justify-between ${formData.ownerName ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.memberId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                  onClick={() => setIsMemberOpen(!isMemberOpen)}
                 >
-                  <span className={formData.ownerName ? 'text-text-primary' : 'text-text-secondary'}>
-                    {formData.ownerName || 'Select a resident'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {formData.ownerName ? (
+                      <>
+                        <User className="w-4 h-4 text-brand-primary" />
+                        <span className="text-text-primary">{formData.ownerName}</span>
+                        {formData.unit && (
+                          <span className="text-text-secondary text-xs">(Room {formData.unit})</span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-text-secondary">Select vehicle owner</span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     {formData.ownerName && (
                       <Check className="w-4 h-4 text-green-500" />
                     )}
-                    <ChevronDown className={`size-4 text-text-secondary transition-transform ${isOwnerOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`size-4 text-text-secondary transition-transform ${isMemberOpen ? 'rotate-180' : ''}`} />
                   </div>
                 </button>
-                {isOwnerOpen && (
+                {isMemberOpen && (
                   <div className="absolute z-10 bg-bg-white border border-border-light rounded-lg shadow-lg w-full mt-1 max-h-[260px] overflow-y-auto scrollbar-hide">
                     {members.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-text-secondary">No residents found</div>
+                      <div className="px-4 py-3 text-sm text-text-secondary">No members found</div>
                     ) : (
                       members.map(member => (
                         <button
                           key={member.id}
                           type="button"
-                          className={`w-full px-4 py-3 text-left hover:bg-bg-hover transition-colors ${formData.ownerName === member.name ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'}`}
-                          onClick={() => handleOwnerSelect(member)}
+                          className={`w-full px-4 py-3 text-left hover:bg-bg-hover transition-colors ${formData.memberId === member.id ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'}`}
+                          onClick={() => handleMemberSelect(member)}
                         >
-                          <p className="leading-tight font-medium">{member.name}</p>
-                          <p className="text-xs text-text-secondary">
-                            {member.household?.unit ? `Unit ${member.household.unit}` : 'No unit assigned'} • CCCD: {member.cccd}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-brand-primary/20 flex items-center justify-center">
+                              <User className="w-4 h-4 text-brand-primary" />
+                            </div>
+                            <div>
+                              <p className="leading-tight font-medium">{member.name}</p>
+                              <p className="text-xs text-text-secondary">
+                                {member.household?.unit ? `Room ${member.household.unit}` : 'No room assigned'}
+                              </p>
+                            </div>
+                          </div>
                         </button>
                       ))
                     )}
                   </div>
                 )}
               </div>
-              {errors.ownerName && <p className="text-xs text-red-500 mt-0.5">{errors.ownerName}</p>}
+              {errors.memberId && <p className="text-xs text-red-500 mt-0.5">{errors.memberId}</p>}
             </div>
 
             <div>
-              <label className="text-sm font-medium text-text-primary mb-2 block">Apartment Unit *</label>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Phone</label>
               <div className="relative">
                 <input
                   type="text"
-                  value={formData.unit}
-                  readOnly
-                  className={`input-default text-sm pr-10 bg-bg-hover cursor-not-allowed ${formData.unit.trim().length > 0 ? 'border-green-500' : errors.unit ? 'border-red-500' : ''}`}
-                  placeholder="Auto-filled from resident"
-                />
-                {formData.unit.trim().length > 0 && (
-                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
-                )}
-                {formData.unit.trim().length === 0 && errors.unit && (
-                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
-                )}
-              </div>
-              {errors.unit && <p className="text-xs text-red-500 mt-0.5">{errors.unit}</p>}
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-text-primary mb-2 block">Phone Number *</label>
-              <div className="relative">
-                <input
-                  type="tel"
                   value={formData.phone}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9]/g, '');
-                    handleChange('phone', value);
-                  }}
-                  className={`input-default text-sm pr-16 ${formData.phone.length >= 10 && formData.phone.length <= 11 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="Auto-filled from resident"
-                  required
+                  readOnly
+                  className="input-default text-sm bg-bg-hover cursor-not-allowed"
+                  placeholder="Auto-filled from owner"
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                  <span className={`text-xs ${formData.phone.length >= 10 && formData.phone.length <= 11 ? 'text-green-500' : 'text-text-muted'}`}>
-                    {formData.phone.length}/10-11
-                  </span>
-                  {formData.phone.length >= 10 && formData.phone.length <= 11 && (
-                    <Check className="w-4 h-4 text-green-500" />
-                  )}
-                  {formData.phone.length > 0 && (formData.phone.length < 10 || formData.phone.length > 11) && (
-                    <X className="w-4 h-4 text-red-500" />
-                  )}
-                </div>
               </div>
-              {errors.phone && <p className="text-xs text-red-500 mt-0.5">{errors.phone}</p>}
             </div>
           </div>
 
           {/* Vehicle Column */}
-          <div className="bg-bg-white rounded-[16px] p-8 shadow-lg border border-border-light space-y-5">
+          <div className="bg-bg-white rounded-2xl p-8 shadow-lg border border-border-light space-y-5">
             <h3 className="font-semibold text-text-primary text-lg">Vehicle Details</h3>
 
             <div>
@@ -305,6 +392,9 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
                   <div className="flex items-center gap-2">
                     <VehicleIcon className="size-4 text-brand-primary" />
                     <span className="text-text-primary">{getVehicleTypeLabel()}</span>
+                    <span className="text-text-secondary text-xs">
+                      (${VEHICLE_PRICES[formData.vehicleType as keyof typeof VEHICLE_PRICES]}/month)
+                    </span>
                   </div>
                   <ChevronDown className={`size-4 text-text-secondary transition-transform ${isVehicleTypeOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -315,16 +405,18 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
                       return (
                         <div
                           key={type.value}
-                          className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm transition-colors flex items-center gap-3 ${
+                          className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm transition-colors flex items-center justify-between ${
                             formData.vehicleType === type.value ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'
                           }`}
-                          onClick={() => {
-                            handleChange('vehicleType', type.value);
-                            setIsVehicleTypeOpen(false);
-                          }}
+                          onClick={() => handleVehicleTypeChange(type.value as 'car' | 'motorcycle' | 'bicycle')}
                         >
-                          <Icon className="size-4" />
-                          {type.label}
+                          <div className="flex items-center gap-3">
+                            <Icon className="size-4" />
+                            {type.label}
+                          </div>
+                          <span className={`text-xs ${type.price === 0 ? 'text-green-600 font-medium' : 'text-text-secondary'}`}>
+                            {type.price === 0 ? 'Free' : `$${type.price}/month`}
+                          </span>
                         </div>
                       );
                     })}
@@ -350,26 +442,22 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
             </div>
 
             <div>
-              <label className="text-sm font-medium text-text-primary mb-2 block">Monthly Fee ($) *</label>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Monthly Fee ($)</label>
               <div className="relative">
                 <input
                   type="number"
                   value={formData.monthlyFee}
-                  onChange={(e) => handleChange('monthlyFee', e.target.value)}
-                  className={`input-default text-sm pr-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${formData.monthlyFee && parseFloat(formData.monthlyFee) > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.monthlyFee ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="e.g., 50"
+                  readOnly
+                  className="input-default text-sm pr-10 bg-bg-hover cursor-not-allowed"
+                  placeholder="Auto-set by vehicle type"
                   min="0"
                   step="0.01"
-                  required
                 />
-                {formData.monthlyFee && parseFloat(formData.monthlyFee) > 0 && (
-                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
-                )}
-                {formData.monthlyFee && parseFloat(formData.monthlyFee) <= 0 && (
-                  <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
+                {parseFloat(formData.monthlyFee) === 0 && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">Free</span>
                 )}
               </div>
-              {errors.monthlyFee && <p className="text-xs text-red-500 mt-0.5">{errors.monthlyFee}</p>}
+              <p className="text-xs text-text-secondary mt-1">Price is set automatically based on vehicle type</p>
             </div>
 
             <div>

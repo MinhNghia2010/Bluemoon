@@ -33,13 +33,50 @@ interface Household {
 
 type ViewMode = 'list' | 'add' | 'edit';
 
+// Get initial state from localStorage
+const getInitialState = () => {
+  if (typeof window === 'undefined') return null;
+  const saved = localStorage.getItem('bluemoon-households-state');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {}
+  }
+  return null;
+};
+
 export function HouseholdsView() {
+  const initialState = getInitialState();
+  
   const [households, setHouseholds] = useState<Household[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>(initialState?.filter || 'all');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialState?.viewMode || 'list');
   const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(initialState?.showModal || false);
+  const [pendingHouseholdId, setPendingHouseholdId] = useState<string | null>(initialState?.selectedHouseholdId || null);
+
+  // Save view state to localStorage
+  useEffect(() => {
+    const state = {
+      viewMode,
+      selectedHouseholdId: selectedHousehold?.id || null,
+      showModal,
+      filter
+    };
+    localStorage.setItem('bluemoon-households-state', JSON.stringify(state));
+  }, [viewMode, selectedHousehold?.id, showModal, filter]);
+
+  // Restore selected household after data loads
+  useEffect(() => {
+    if (pendingHouseholdId && households.length > 0) {
+      const household = households.find(h => h.id === pendingHouseholdId);
+      if (household) {
+        setSelectedHousehold(household);
+      }
+      setPendingHouseholdId(null);
+    }
+  }, [households, pendingHouseholdId]);
 
   // Fetch households and their payment status from API
   const fetchHouseholds = async () => {

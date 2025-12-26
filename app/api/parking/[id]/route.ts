@@ -46,8 +46,25 @@ export async function PUT(
 
     const updateData: any = {}
 
+    // Check for duplicate slot number if changing
+    if (data.slotNumber) {
+      const existing = await prisma.parkingSlot.findFirst({
+        where: {
+          slotNumber: data.slotNumber,
+          NOT: { id }
+        }
+      })
+      if (existing) {
+        return NextResponse.json(
+          { error: 'Slot number already exists' },
+          { status: 400 }
+        )
+      }
+      updateData.slotNumber = data.slotNumber
+    }
+
     if (data.type) updateData.type = data.type
-    if (data.monthlyFee) updateData.monthlyFee = parseFloat(data.monthlyFee)
+    if (data.monthlyFee !== undefined) updateData.monthlyFee = parseFloat(data.monthlyFee)
     if (data.status) updateData.status = data.status
     if (data.licensePlate !== undefined) updateData.licensePlate = data.licensePlate || null
 

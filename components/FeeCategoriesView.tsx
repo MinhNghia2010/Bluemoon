@@ -20,12 +20,48 @@ interface FeeCategory {
 
 type ViewMode = 'list' | 'add' | 'edit';
 
+// Get initial state from localStorage
+const getInitialState = () => {
+  if (typeof window === 'undefined') return null;
+  const saved = localStorage.getItem('bluemoon-feecategories-state');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {}
+  }
+  return null;
+};
+
 export function FeeCategoriesView() {
+  const initialState = getInitialState();
+  
   const [categories, setCategories] = useState<FeeCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialState?.viewMode || 'list');
   const [selectedCategory, setSelectedCategory] = useState<FeeCategory | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(initialState?.showModal || false);
+  const [pendingCategoryId, setPendingCategoryId] = useState<string | null>(initialState?.selectedCategoryId || null);
+
+  // Save view state to localStorage
+  useEffect(() => {
+    const state = {
+      viewMode,
+      selectedCategoryId: selectedCategory?.id || null,
+      showModal
+    };
+    localStorage.setItem('bluemoon-feecategories-state', JSON.stringify(state));
+  }, [viewMode, selectedCategory?.id, showModal]);
+
+  // Restore selected category after data loads
+  useEffect(() => {
+    if (pendingCategoryId && categories.length > 0) {
+      const category = categories.find(c => c.id === pendingCategoryId);
+      if (category) {
+        setSelectedCategory(category);
+      }
+      setPendingCategoryId(null);
+    }
+  }, [categories, pendingCategoryId]);
 
   // Fetch categories from API
   const fetchCategories = async () => {

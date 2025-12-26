@@ -48,15 +48,53 @@ interface GroupedHousehold {
 
 type ViewMode = 'list' | 'add' | 'edit';
 
+// Get initial state from localStorage
+const getInitialState = () => {
+  if (typeof window === 'undefined') return null;
+  const saved = localStorage.getItem('bluemoon-feecollection-state');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {}
+  }
+  return null;
+};
+
 export function FeeCollectionView() {
+  const initialState = getInitialState();
+  
   const [payments, setPayments] = useState<Payment[]>([]);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'collected' | 'overdue'>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'collected' | 'overdue'>(initialState?.filter || 'all');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialState?.viewMode || 'list');
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>('all');
-  const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<number | 'all'>(initialState?.selectedMonth ?? 'all');
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>(initialState?.selectedYear ?? 'all');
+  const [pendingPaymentId, setPendingPaymentId] = useState<string | null>(initialState?.selectedPaymentId || null);
+
+  // Save view state to localStorage
+  useEffect(() => {
+    const state = {
+      viewMode,
+      selectedPaymentId: selectedPayment?.id || null,
+      filter,
+      selectedMonth,
+      selectedYear
+    };
+    localStorage.setItem('bluemoon-feecollection-state', JSON.stringify(state));
+  }, [viewMode, selectedPayment?.id, filter, selectedMonth, selectedYear]);
+
+  // Restore selected payment after data loads
+  useEffect(() => {
+    if (pendingPaymentId && payments.length > 0) {
+      const payment = payments.find(p => p.id === pendingPaymentId);
+      if (payment) {
+        setSelectedPayment(payment);
+      }
+      setPendingPaymentId(null);
+    }
+  }, [payments, pendingPaymentId]);
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',

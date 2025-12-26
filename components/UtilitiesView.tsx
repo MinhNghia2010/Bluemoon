@@ -35,17 +35,32 @@ const monthNames = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+// Get initial state from localStorage
+const getInitialState = () => {
+  if (typeof window === 'undefined') return null;
+  const saved = localStorage.getItem('bluemoon-utilities-state');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {}
+  }
+  return null;
+};
+
 export function UtilitiesView() {
+  const initialState = getInitialState();
+  const currentDate = new Date();
+  
   const [utilityBills, setUtilityBills] = useState<UtilityBill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'overdue'>(initialState?.filter || 'all');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialState?.viewMode || 'list');
   const [selectedBill, setSelectedBill] = useState<UtilityBill | null>(null);
+  const [pendingBillId, setPendingBillId] = useState<string | null>(initialState?.selectedBillId || null);
   
   // Month/Year filter with current month/year as default
-  const currentDate = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getMonth());
-  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(initialState?.selectedMonth ?? currentDate.getMonth());
+  const [selectedYear, setSelectedYear] = useState<number>(initialState?.selectedYear ?? currentDate.getFullYear());
   const [isMonthOpen, setIsMonthOpen] = useState(false);
   const [isYearOpen, setIsYearOpen] = useState(false);
   const monthDropdownRef = useRef<HTMLDivElement>(null);
@@ -53,6 +68,29 @@ export function UtilitiesView() {
 
   // Generate years array (current year and 5 years back)
   const years = Array.from({ length: 6 }, (_, i) => currentDate.getFullYear() - 5 + i);
+
+  // Save view state to localStorage
+  useEffect(() => {
+    const state = {
+      viewMode,
+      selectedBillId: selectedBill?.id || null,
+      filter,
+      selectedMonth,
+      selectedYear
+    };
+    localStorage.setItem('bluemoon-utilities-state', JSON.stringify(state));
+  }, [viewMode, selectedBill?.id, filter, selectedMonth, selectedYear]);
+
+  // Restore selected bill after data loads
+  useEffect(() => {
+    if (pendingBillId && utilityBills.length > 0) {
+      const bill = utilityBills.find(b => b.id === pendingBillId);
+      if (bill) {
+        setSelectedBill(bill);
+      }
+      setPendingBillId(null);
+    }
+  }, [utilityBills, pendingBillId]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {

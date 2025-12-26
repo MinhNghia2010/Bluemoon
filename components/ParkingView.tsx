@@ -25,12 +25,48 @@ export interface ParkingSlot {
 
 type ViewMode = 'list' | 'add' | 'edit';
 
+// Get initial state from localStorage
+const getInitialState = () => {
+  if (typeof window === 'undefined') return null;
+  const saved = localStorage.getItem('bluemoon-parking-state');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {}
+  }
+  return null;
+};
+
 export function ParkingView() {
+  const initialState = getInitialState();
+  
   const [parkingSlots, setParkingSlots] = useState<ParkingSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'car' | 'motorcycle' | 'bicycle'>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [filter, setFilter] = useState<'all' | 'car' | 'motorcycle' | 'bicycle'>(initialState?.filter || 'all');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialState?.viewMode || 'list');
   const [selectedSlot, setSelectedSlot] = useState<ParkingSlot | null>(null);
+  const [pendingSlotId, setPendingSlotId] = useState<string | null>(initialState?.selectedSlotId || null);
+
+  // Save view state to localStorage
+  useEffect(() => {
+    const state = {
+      viewMode,
+      selectedSlotId: selectedSlot?.id || null,
+      filter
+    };
+    localStorage.setItem('bluemoon-parking-state', JSON.stringify(state));
+  }, [viewMode, selectedSlot?.id, filter]);
+
+  // Restore selected slot after data loads
+  useEffect(() => {
+    if (pendingSlotId && parkingSlots.length > 0) {
+      const slot = parkingSlots.find(s => s.id === pendingSlotId);
+      if (slot) {
+        setSelectedSlot(slot);
+      }
+      setPendingSlotId(null);
+    }
+  }, [parkingSlots, pendingSlotId]);
 
   const fetchParkingSlots = async () => {
     try {
@@ -68,6 +104,7 @@ export function ParkingView() {
     try {
       if (viewMode === 'edit' && selectedSlot) {
         await parkingApi.update(selectedSlot.id, {
+          slotNumber: data.slotNumber,
           type: data.vehicleType,
           licensePlate: data.licensePlate,
           monthlyFee: data.monthlyFee,

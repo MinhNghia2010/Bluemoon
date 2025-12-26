@@ -3,12 +3,25 @@ import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-// GET all parking slots
+// GET all parking slots or check for duplicate
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const type = searchParams.get('type')
+    const checkSlot = searchParams.get('checkSlot')
+    const excludeId = searchParams.get('excludeId')
+
+    // Check for duplicate slot number
+    if (checkSlot) {
+      const existing = await prisma.parkingSlot.findFirst({
+        where: {
+          slotNumber: checkSlot,
+          ...(excludeId ? { NOT: { id: excludeId } } : {})
+        }
+      })
+      return NextResponse.json({ exists: !!existing })
+    }
 
     const where: any = {}
     

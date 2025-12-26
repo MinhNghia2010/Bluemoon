@@ -9,6 +9,18 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
     const search = searchParams.get('search')
+    const checkUnit = searchParams.get('checkUnit')
+    const excludeId = searchParams.get('excludeId')
+
+    // Check if unit exists (for real-time validation)
+    if (checkUnit) {
+      const whereClause: any = { unit: checkUnit }
+      if (excludeId) {
+        whereClause.NOT = { id: excludeId }
+      }
+      const existing = await prisma.household.findFirst({ where: whereClause })
+      return NextResponse.json({ exists: !!existing })
+    }
 
     const where: Record<string, unknown> = {}
     
