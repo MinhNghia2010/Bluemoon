@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, Edit2, Trash2, Users, AlertTriangle, ChevronDown, Check, X, Home, Clock, UserX, Plane, User, Plus } from 'lucide-react'
 import { PageHeader } from './shared/PageHeader'
 import { format } from 'date-fns'
@@ -73,6 +73,142 @@ const getInitialState = () => {
   }
   return null;
 };
+
+// Skeleton for a single member row
+const MemberRowSkeleton = () => (
+  <tr className="border-b border-border-light animate-pulse">
+    <td className="px-6 py-4"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-6"></div></td>
+    <td className="px-6 py-4">
+      <div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-1"></div>
+        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+      </div>
+    </td>
+    <td className="px-6 py-4"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div></td>
+    <td className="px-6 py-4"><div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-full w-16"></div></td>
+    <td className="px-6 py-4"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-28"></div></td>
+    <td className="px-6 py-4"><div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-full w-20"></div></td>
+    <td className="px-6 py-4">
+      <div className="flex gap-2">
+        <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+        <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+      </div>
+    </td>
+  </tr>
+);
+
+// Lazy row wrapper for viewport-based loading
+function LazyMemberRow({ 
+  member, 
+  index,
+  onEdit,
+  onDelete,
+  getStatusBadge
+}: { 
+  member: HouseholdMember;
+  index: number;
+  onEdit: (member: HouseholdMember) => void;
+  onDelete: (member: HouseholdMember) => void;
+  getStatusBadge: (member: HouseholdMember) => React.ReactNode;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '100px', threshold: 0.01 }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  if (!isVisible) {
+    return (
+      <tr ref={ref} className="border-b border-border-light animate-pulse">
+        <td className="px-6 py-4"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-6"></div></td>
+        <td className="px-6 py-4">
+          <div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-1"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+          </div>
+        </td>
+        <td className="px-6 py-4"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div></td>
+        <td className="px-6 py-4"><div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-full w-16"></div></td>
+        <td className="px-6 py-4"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-28"></div></td>
+        <td className="px-6 py-4"><div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-full w-20"></div></td>
+        <td className="px-6 py-4">
+          <div className="flex gap-2">
+            <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+            <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr ref={ref} className={`border-b border-border-light last:border-b-0 hover:bg-bg-hover/50 transition-colors ${member.status === 'moved_out' ? 'opacity-60' : ''}`}>
+      <td className="px-6 py-4 text-sm text-text-secondary">{index + 1}</td>
+      <td className="px-6 py-4">
+        <div>
+          <span className="font-medium text-text-primary">{member.name}</span>
+          <p className="text-xs text-text-secondary">
+            {format(new Date(member.dateOfBirth), 'MMM d, yyyy')}
+          </p>
+        </div>
+      </td>
+      <td className="px-6 py-4">
+        {member.household ? (
+          <span className="text-brand-primary font-medium">{member.household.unit}</span>
+        ) : (
+          <span className="text-text-secondary">-</span>
+        )}
+      </td>
+      <td className="px-6 py-4">
+        {member.isOwner ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+            <User className="w-3 h-3" />
+            Owner
+          </span>
+        ) : (
+          <span className="text-sm text-text-secondary">Member</span>
+        )}
+      </td>
+      <td className="px-6 py-4 text-sm text-text-secondary font-mono">{member.cccd}</td>
+      <td className="px-6 py-4">
+        {getStatusBadge(member)}
+      </td>
+      <td className="px-6 py-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onEdit(member)}
+            className="p-2 hover:bg-bg-hover rounded-lg transition-colors text-text-secondary hover:text-brand-primary"
+            title="Edit"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onDelete(member)}
+            className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-text-secondary hover:text-red-600"
+            title="Delete"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 export function DemographyView() {
   const initialState = getInitialState();
@@ -433,62 +569,20 @@ export function DemographyView() {
             </thead>
             <tbody>
               {filteredMembers.map((member, index) => (
-                <tr key={member.id} className={`border-b border-border-light last:border-b-0 hover:bg-bg-hover/50 transition-colors ${member.status === 'moved_out' ? 'opacity-60' : ''}`}>
-                  <td className="px-6 py-4 text-sm text-text-secondary">{index + 1}</td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <span className="font-medium text-text-primary">{member.name}</span>
-                      <p className="text-xs text-text-secondary">
-                        {format(new Date(member.dateOfBirth), 'MMM d, yyyy')}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {member.household ? (
-                      <span className="text-brand-primary font-medium">{member.household.unit}</span>
-                    ) : (
-                      <span className="text-text-secondary">-</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    {member.isOwner ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                        <User className="w-3 h-3" />
-                        Owner
-                      </span>
-                    ) : (
-                      <span className="text-sm text-text-secondary">Member</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-text-secondary font-mono">{member.cccd}</td>
-                  <td className="px-6 py-4">
-                    {getStatusBadge(member)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingMember(member)
-                          setShowForm(true)
-                        }}
-                        className="p-2 hover:bg-bg-hover rounded-lg transition-colors text-text-secondary hover:text-brand-primary"
-                        title="Edit"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMemberToDelete(member)
-                          setDeleteDialogOpen(true)
-                        }}
-                        className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-text-secondary hover:text-red-600"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <LazyMemberRow
+                  key={member.id}
+                  member={member}
+                  index={index}
+                  onEdit={(m) => {
+                    setEditingMember(m)
+                    setShowForm(true)
+                  }}
+                  onDelete={(m) => {
+                    setMemberToDelete(m)
+                    setDeleteDialogOpen(true)
+                  }}
+                  getStatusBadge={getStatusBadge}
+                />
               ))}
             </tbody>
           </table>

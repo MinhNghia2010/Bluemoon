@@ -1,15 +1,72 @@
 'use client'
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Home, Receipt, Users, Car, Droplets, Flame, Wifi, Motorbike, Bike, Zap } from 'lucide-react';
 import { PageHeader } from './shared/PageHeader';
 import { SummaryCard } from './shared/SummaryCard';
 import { FilterButtons } from './shared/FilterButtons';
-import { MonthlyRevenueChart } from './statistics/MonthlyRevenueChart';
-import { CategoryDistributionChart } from './statistics/CategoryDistributionChart';
-import { CollectionRateChart } from './statistics/CollectionRateChart';
 import { statisticsApi } from '@/lib/api';
 import { toast } from 'sonner';
+
+// Skeleton Components
+const ChartSkeleton = ({ title }: { title: string }) => (
+  <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-2xl p-6">
+    <div className="flex items-center justify-between mb-6">
+      <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-40"></div>
+      <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
+    </div>
+    <div className="h-64 bg-gray-300 dark:bg-gray-600 rounded-xl flex items-end justify-around p-4">
+      {[1, 2, 3, 4, 5, 6].map(i => (
+        <div key={i} className="w-8 bg-gray-400 dark:bg-gray-500 rounded-t" style={{ height: `${Math.random() * 60 + 20}%` }}></div>
+      ))}
+    </div>
+  </div>
+);
+
+const PieChartSkeleton = () => (
+  <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-2xl p-6">
+    <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-48 mb-6"></div>
+    <div className="flex items-center justify-center">
+      <div className="w-48 h-48 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+    </div>
+    <div className="flex flex-wrap gap-3 mt-6 justify-center">
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
+          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-16"></div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const LineChartSkeleton = () => (
+  <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-2xl p-6">
+    <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-36 mb-6"></div>
+    <div className="h-64 bg-gray-300 dark:bg-gray-600 rounded-xl relative overflow-hidden">
+      <svg className="w-full h-full" preserveAspectRatio="none">
+        <path d="M0,180 Q50,120 100,140 T200,100 T300,130 T400,80 T500,110" fill="none" stroke="currentColor" strokeWidth="3" className="text-gray-400 dark:text-gray-500" />
+      </svg>
+    </div>
+  </div>
+);
+
+// Lazy load chart components
+const MonthlyRevenueChart = dynamic(() => import('./statistics/MonthlyRevenueChart').then(mod => ({ default: mod.MonthlyRevenueChart })), {
+  loading: () => <ChartSkeleton title="Monthly Revenue" />,
+  ssr: false
+});
+
+const CategoryDistributionChart = dynamic(() => import('./statistics/CategoryDistributionChart').then(mod => ({ default: mod.CategoryDistributionChart })), {
+  loading: () => <PieChartSkeleton />,
+  ssr: false
+});
+
+const CollectionRateChart = dynamic(() => import('./statistics/CollectionRateChart').then(mod => ({ default: mod.CollectionRateChart })), {
+  loading: () => <LineChartSkeleton />,
+  ssr: false
+});
 
 // Get initial state from localStorage
 const getInitialState = () => {
@@ -63,13 +120,36 @@ export function StatisticsView() {
 
   if (isLoading) {
     return (
-      <div>
-        <PageHeader
-          title="Statistics"
-          description="Financial reports and payment analytics"
-        />
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+      <div className="animate-pulse">
+        {/* Page Header Skeleton */}
+        <div className="flex items-center justify-between mb-10">
+          <div>
+            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64"></div>
+          </div>
+        </div>
+        {/* Filter Tabs Skeleton */}
+        <div className="flex gap-2 mb-6">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg w-24"></div>
+          ))}
+        </div>
+        {/* Summary Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-28 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+          ))}
+        </div>
+        {/* Quick Stats Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+          ))}
+        </div>
+        {/* Charts Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+          <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
         </div>
       </div>
     );

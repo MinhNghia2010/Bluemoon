@@ -1,13 +1,129 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { Plus, ChevronDown } from 'lucide-react';
 import { SummaryCard } from './shared/SummaryCard';
-import { HouseholdPaymentCard } from './fee-collection/HouseholdPaymentCard';
-import { PaymentFilters } from './fee-collection/PaymentFilters';
-import { PaymentForm } from './fee-collection/PaymentForm';
 import { paymentsApi, householdsApi } from '@/lib/api';
 import { toast } from 'sonner';
+
+// Skeleton Components
+const HouseholdPaymentCardSkeleton = () => (
+  <div className="animate-pulse bg-gray-200 dark:bg-gray-700 rounded-2xl p-5">
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-3">
+        <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+        <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
+      </div>
+      <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
+    </div>
+    <div className="space-y-3">
+      {[1, 2].map(j => (
+        <div key={j} className="flex items-center justify-between p-3 bg-gray-300 dark:bg-gray-600 rounded-lg">
+          <div className="h-4 bg-gray-400 dark:bg-gray-500 rounded w-28"></div>
+          <div className="h-4 bg-gray-400 dark:bg-gray-500 rounded w-20"></div>
+          <div className="h-6 bg-gray-400 dark:bg-gray-500 rounded-full w-16"></div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const PaymentFiltersSkeleton = () => (
+  <div className="animate-pulse flex gap-2 mb-6">
+    {[1, 2, 3, 4].map(i => (
+      <div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg w-24"></div>
+    ))}
+  </div>
+);
+
+const PaymentFormSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="flex items-center gap-4 mb-8">
+      <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+      <div>
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-44 mb-2"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-56"></div>
+      </div>
+    </div>
+    <div className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <div key={i}>
+            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-28 mb-2"></div>
+            <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md"></div>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end gap-3 mt-8">
+        <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md w-24"></div>
+        <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md w-32"></div>
+      </div>
+    </div>
+  </div>
+);
+
+// Lazy load heavy components
+const HouseholdPaymentCard = dynamic(() => import('./fee-collection/HouseholdPaymentCard').then(mod => ({ default: mod.HouseholdPaymentCard })), {
+  loading: () => <HouseholdPaymentCardSkeleton />,
+  ssr: false
+});
+
+const PaymentFilters = dynamic(() => import('./fee-collection/PaymentFilters').then(mod => ({ default: mod.PaymentFilters })), {
+  loading: () => <PaymentFiltersSkeleton />,
+  ssr: false
+});
+
+const PaymentForm = dynamic(() => import('./fee-collection/PaymentForm').then(mod => ({ default: mod.PaymentForm })), {
+  loading: () => <PaymentFormSkeleton />,
+  ssr: false
+});
+
+// Lazy card wrapper for viewport-based loading
+function LazyHouseholdPaymentCard({ 
+  household, 
+  onMarkAsPaid 
+}: { 
+  household: GroupedHousehold;
+  onMarkAsPaid: (paymentId: string) => void;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '100px', threshold: 0.01 }
+    );
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref}>
+      {isVisible ? (
+        <HouseholdPaymentCard
+          unit={household.unit}
+          ownerName={household.ownerName}
+          balance={household.balance}
+          payments={household.payments}
+          onMarkAsPaid={onMarkAsPaid}
+        />
+      ) : (
+        <HouseholdPaymentCardSkeleton />
+      )}
+    </div>
+  );
+}
 
 interface Payment {
   id: string;
@@ -436,8 +552,28 @@ export function FeeCollectionView() {
 
       {/* Loading State */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        <div className="animate-pulse space-y-4">
+          {/* Payment Cards Skeleton */}
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+                  <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
+                </div>
+                <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
+              </div>
+              <div className="space-y-3">
+                {[1, 2].map(j => (
+                  <div key={j} className="flex items-center justify-between p-3 bg-gray-300 dark:bg-gray-600 rounded-lg">
+                    <div className="h-4 bg-gray-400 dark:bg-gray-500 rounded w-28"></div>
+                    <div className="h-4 bg-gray-400 dark:bg-gray-500 rounded w-20"></div>
+                    <div className="h-6 bg-gray-400 dark:bg-gray-500 rounded-full w-16"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       ) : groupedHouseholds.length === 0 ? (
         <div className="text-center py-12">
@@ -453,12 +589,9 @@ export function FeeCollectionView() {
         /* Households Grid - Grouped by household */
         <div className="space-y-4">
           {groupedHouseholds.map((household) => (
-            <HouseholdPaymentCard
+            <LazyHouseholdPaymentCard
               key={household.id}
-              unit={household.unit}
-              ownerName={household.ownerName}
-              balance={household.balance}
-              payments={household.payments}
+              household={household}
               onMarkAsPaid={handleMarkAsPaid}
             />
           ))}

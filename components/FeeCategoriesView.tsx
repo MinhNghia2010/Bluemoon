@@ -1,12 +1,72 @@
 'use client'
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { PageHeader } from './shared/PageHeader';
-import { CategoryList } from './fee-categories/CategoryList';
-import { CategoryForm } from './fee-categories/CategoryForm';
-import { CategoryDetailModal } from './fee-categories/CategoryDetailModal';
 import { feeCategoriesApi } from '@/lib/api';
 import { toast } from 'sonner';
+
+// Skeleton Components
+const CategoryListSkeleton = () => (
+  <div className="animate-pulse grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    {[1, 2, 3, 4, 5, 6].map(i => (
+      <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-6">
+        <div className="flex justify-between mb-4">
+          <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
+          <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded-full w-16"></div>
+        </div>
+        <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-28 mb-3"></div>
+        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-full mb-2"></div>
+        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+      </div>
+    ))}
+  </div>
+);
+
+const CategoryFormSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="flex items-center gap-4 mb-8">
+      <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+      <div>
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-44 mb-2"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-56"></div>
+      </div>
+    </div>
+    <div className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-8">
+      <div className="space-y-5">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i}>
+            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-28 mb-2"></div>
+            <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md"></div>
+          </div>
+        ))}
+        <div>
+          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-28 mb-2"></div>
+          <div className="h-24 bg-gray-300 dark:bg-gray-600 rounded-md"></div>
+        </div>
+      </div>
+      <div className="flex justify-end gap-3 mt-8">
+        <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md w-24"></div>
+        <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md w-32"></div>
+      </div>
+    </div>
+  </div>
+);
+
+// Lazy load heavy components
+const CategoryList = dynamic(() => import('./fee-categories/CategoryList').then(mod => ({ default: mod.CategoryList })), {
+  loading: () => <CategoryListSkeleton />,
+  ssr: false
+});
+
+const CategoryForm = dynamic(() => import('./fee-categories/CategoryForm').then(mod => ({ default: mod.CategoryForm })), {
+  loading: () => <CategoryFormSkeleton />,
+  ssr: false
+});
+
+const CategoryDetailModal = dynamic(() => import('./fee-categories/CategoryDetailModal').then(mod => ({ default: mod.CategoryDetailModal })), {
+  ssr: false
+});
 
 interface FeeCategory {
   id: string;
@@ -167,8 +227,20 @@ export function FeeCategoriesView() {
 
       {/* Loading State */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        <div className="animate-pulse">
+          {/* Category Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-6 h-44">
+                <div className="flex justify-between mb-4">
+                  <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
+                  <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded-full w-16"></div>
+                </div>
+                <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-28 mb-3"></div>
+                <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <>

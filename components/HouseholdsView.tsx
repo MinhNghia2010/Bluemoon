@@ -1,13 +1,86 @@
 'use client'
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { PageHeader } from './shared/PageHeader';
 import { FilterButtons } from './shared/FilterButtons';
-import { HouseholdList } from './households/HouseholdList';
-import { HouseholdForm } from './households/HouseholdForm';
-import { HouseholdDetailModal } from './households/HouseholdDetailModal';
 import { householdsApi, paymentsApi } from '@/lib/api';
 import { toast } from 'sonner';
+
+// Skeleton Components
+const HouseholdListSkeleton = () => (
+  <div className="animate-pulse grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    {[1, 2, 3, 4, 5, 6].map(i => (
+      <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+          <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded-full w-16"></div>
+        </div>
+        <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
+        <div className="flex gap-4 mb-3">
+          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-16"></div>
+        </div>
+        <div className="flex -space-x-2">
+          {[1, 2, 3].map(j => (
+            <div key={j} className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full border-2 border-gray-200 dark:border-gray-700"></div>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const HouseholdFormSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="flex items-center gap-4 mb-8">
+      <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+      <div>
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-2"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64"></div>
+      </div>
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-8 space-y-5">
+        <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-40 mb-4"></div>
+        {[1, 2, 3, 4].map(i => (
+          <div key={i}>
+            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24 mb-2"></div>
+            <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md"></div>
+          </div>
+        ))}
+      </div>
+      <div className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-8 space-y-5">
+        <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-48 mb-4"></div>
+        {[1, 2, 3].map(i => (
+          <div key={i}>
+            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24 mb-2"></div>
+            <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div className="flex justify-end gap-3 mt-6">
+      <div className="h-11 bg-gray-200 dark:bg-gray-700 rounded-md w-24"></div>
+      <div className="h-11 bg-gray-200 dark:bg-gray-700 rounded-md w-32"></div>
+    </div>
+  </div>
+);
+
+// Lazy load heavy components
+const HouseholdList = dynamic(() => import('./households/HouseholdList').then(mod => ({ default: mod.HouseholdList })), {
+  loading: () => <HouseholdListSkeleton />,
+  ssr: false
+});
+
+const HouseholdForm = dynamic(() => import('./households/HouseholdForm').then(mod => ({ default: mod.HouseholdForm })), {
+  loading: () => <HouseholdFormSkeleton />,
+  ssr: false
+});
+
+const HouseholdDetailModal = dynamic(() => import('./households/HouseholdDetailModal').then(mod => ({ default: mod.HouseholdDetailModal })), {
+  ssr: false
+});
 
 interface HouseholdMember {
   id: string;
@@ -226,8 +299,13 @@ export function HouseholdsView() {
 
       {/* Loading State */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        <div className="animate-pulse">
+          {/* Household Cards Grid Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-2xl h-48"></div>
+            ))}
+          </div>
         </div>
       ) : (
         <>

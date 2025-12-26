@@ -1,14 +1,98 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { Zap, Droplet, Wifi, ChevronDown } from 'lucide-react';
 import { PageHeader } from './shared/PageHeader';
 import { FilterButtons } from './shared/FilterButtons';
 import { StatsGrid } from './shared/StatsGrid';
-import { UtilityBillList } from './utilities/UtilityBillList';
-import { UtilityBillForm } from './utilities/UtilityBillForm';
 import { utilitiesApi } from '@/lib/api';
 import { toast } from 'sonner';
+
+// Skeleton Components
+const UtilityBillListSkeleton = () => (
+  <div className="animate-pulse grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    {[1, 2, 3, 4, 5, 6].map(i => (
+      <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-5">
+        <div className="flex justify-between mb-3">
+          <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+          <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded-full w-16"></div>
+        </div>
+        <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
+        <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24 mb-4"></div>
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="text-center">
+            <div className="h-8 w-8 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-1"></div>
+            <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-12 mx-auto"></div>
+          </div>
+          <div className="text-center">
+            <div className="h-8 w-8 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-1"></div>
+            <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-12 mx-auto"></div>
+          </div>
+          <div className="text-center">
+            <div className="h-8 w-8 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-1"></div>
+            <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-12 mx-auto"></div>
+          </div>
+        </div>
+        <div className="flex justify-between pt-3 border-t border-gray-300 dark:border-gray-600">
+          <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-16"></div>
+          <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
+const UtilityBillFormSkeleton = () => (
+  <div className="animate-pulse">
+    <div className="flex items-center gap-4 mb-8">
+      <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+      <div>
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-44 mb-2"></div>
+        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-56"></div>
+      </div>
+    </div>
+    <div className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        {[1, 2].map(i => (
+          <div key={i}>
+            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-28 mb-2"></div>
+            <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md"></div>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="bg-gray-300 dark:bg-gray-600 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-6 w-6 bg-gray-400 dark:bg-gray-500 rounded"></div>
+              <div className="h-5 bg-gray-400 dark:bg-gray-500 rounded w-20"></div>
+            </div>
+            <div className="space-y-3">
+              <div className="h-11 bg-gray-400 dark:bg-gray-500 rounded-md"></div>
+              <div className="h-11 bg-gray-400 dark:bg-gray-500 rounded-md"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-end gap-3">
+        <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md w-24"></div>
+        <div className="h-11 bg-gray-300 dark:bg-gray-600 rounded-md w-32"></div>
+      </div>
+    </div>
+  </div>
+);
+
+// Lazy load heavy components
+const UtilityBillList = dynamic(() => import('./utilities/UtilityBillList').then(mod => ({ default: mod.UtilityBillList })), {
+  loading: () => <UtilityBillListSkeleton />,
+  ssr: false
+});
+
+const UtilityBillForm = dynamic(() => import('./utilities/UtilityBillForm').then(mod => ({ default: mod.UtilityBillForm })), {
+  loading: () => <UtilityBillFormSkeleton />,
+  ssr: false
+});
 
 export interface UtilityBill {
   id: string;
@@ -361,8 +445,25 @@ export function UtilitiesView() {
 
       {/* Loading State */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        <div className="animate-pulse">
+          {/* Utility Bill Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-5 h-48">
+                <div className="flex justify-between mb-3">
+                  <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
+                  <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded-full w-16"></div>
+                </div>
+                <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
+                <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24 mb-4"></div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="h-12 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                  <div className="h-12 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                  <div className="h-12 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         /* Utility Bill List */
