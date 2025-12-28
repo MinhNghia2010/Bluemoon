@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import { CircleUser, Search, Home, Users, CreditCard, Car, Zap } from 'lucide-react';
-import svgPaths from "@/imports/svg-uiac8iywkt";
+import { CircleUser, Search, Home, Users, CreditCard, Car, Zap, ChevronDown } from 'lucide-react';
 import { DarkModeToggle } from "./shared/DarkModeToggle";
 
 interface SearchResult {
@@ -11,33 +10,6 @@ interface SearchResult {
   title: string
   subtitle: string
   view: 'households' | 'demography' | 'feeCategories' | 'feeCollection' | 'statistics' | 'parking' | 'utilities' | 'settings'
-}
-
-function VuesaxTwotoneSearchNormal() {
-  return (
-    <div className="absolute contents inset-0" data-name="vuesax/twotone/search-normal">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 22 22">
-        <g id="search-normal">
-          <path d={svgPaths.p29c64470} id="Vector" stroke="var(--stroke-0, #787486)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-          <path d={svgPaths.p21df7600} id="Vector_2" stroke="var(--stroke-0, #787486)" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
-          <g id="Vector_3" opacity="0"></g>
-        </g>
-      </svg>
-    </div>
-  );
-}
-
-function VuesaxOutlineArrowDown() {
-  return (
-    <div className="absolute contents inset-0" data-name="vuesax/outline/arrow-down">
-      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 18 18">
-        <g id="arrow-down">
-          <path d={svgPaths.p3298ef40} fill="var(--fill-0, #292D32)" id="Vector" />
-          <g id="Vector_2" opacity="0"></g>
-        </g>
-      </svg>
-    </div>
-  );
 }
 
 interface HeaderProps {
@@ -138,7 +110,7 @@ export function Header({ onLogout, onNavigate }: HeaderProps) {
               {isSearching ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#5030e5]" />
               ) : (
-                <VuesaxTwotoneSearchNormal />
+                <Search className="size-[22px] text-[#787486]" />
               )}
             </div>
             <input
@@ -203,7 +175,7 @@ export function Header({ onLogout, onNavigate }: HeaderProps) {
                 <CircleUser className="size-[24px] text-[#5030e5]" />
               </div>
               <div className={`relative size-[18px] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}>
-                <VuesaxOutlineArrowDown />
+                <ChevronDown className="size-[18px] text-[#292D32]" />
               </div>
             </button>
             

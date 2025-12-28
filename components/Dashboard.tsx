@@ -112,16 +112,24 @@ const FeeCategoriesSkeleton = () => (
       </div>
       <div className="h-11 bg-gray-200 dark:bg-gray-700 rounded-md w-40"></div>
     </div>
-    {/* Category Cards */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    {/* Category Table */}
+    <div className="bg-bg-white rounded-[16px] overflow-hidden shadow-lg border border-border-light">
+      {/* Table Header */}
+      <div className="grid grid-cols-[2fr_1fr_1fr_2fr_80px] gap-[20px] px-[24px] py-[16px] bg-neutral-50 border-b border-border-light">
+        <div className="text-sm font-medium text-text-secondary">Category Name</div>
+        <div className="text-sm font-medium text-text-secondary">Amount</div>
+        <div className="text-sm font-medium text-text-secondary">Frequency</div>
+        <div className="text-sm font-medium text-text-secondary">Description</div>
+        <div className="text-sm font-medium text-text-secondary text-center">Actions</div>
+      </div>
+      {/* Skeleton Rows */}
       {[1, 2, 3, 4, 5, 6].map(i => (
-        <div key={i} className="bg-gray-200 dark:bg-gray-700 rounded-2xl p-6 h-44">
-          <div className="flex justify-between mb-4">
-            <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
-            <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded-full w-16"></div>
-          </div>
-          <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-28 mb-3"></div>
-          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
+        <div key={i} className="grid grid-cols-[2fr_1fr_1fr_2fr_80px] gap-[20px] px-[24px] py-[20px] border-b border-neutral-100">
+          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+          <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-16 mx-auto"></div>
         </div>
       ))}
     </div>
