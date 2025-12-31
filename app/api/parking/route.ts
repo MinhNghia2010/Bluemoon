@@ -40,12 +40,26 @@ export async function GET(request: NextRequest) {
           include: {
             owner: true
           }
+        },
+        member: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            household: {
+              select: {
+                id: true,
+                unit: true,
+                phone: true
+              }
+            }
+          }
         }
       },
       orderBy: { slotNumber: 'asc' }
     })
 
-    // Transform for response with ownerName for backward compatibility
+    // Transform for response with vehicle owner (member) and household info
     const slotsWithOwnerName = parkingSlots.map((slot: any) => ({
       id: slot.id,
       slotNumber: slot.slotNumber,
@@ -54,6 +68,8 @@ export async function GET(request: NextRequest) {
       status: slot.status,
       monthlyFee: slot.monthlyFee,
       householdId: slot.householdId,
+      memberId: slot.memberId,
+      vehicleOwner: slot.member,
       household: slot.household ? {
         id: slot.household.id,
         unit: slot.household.unit,
@@ -81,7 +97,7 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
 
-    const { slotNumber, type, monthlyFee, householdId, licensePlate } = data
+    const { slotNumber, type, monthlyFee, householdId, memberId, licensePlate } = data
 
     if (!slotNumber || !type || !monthlyFee) {
       return NextResponse.json(
@@ -108,11 +124,26 @@ export async function POST(request: NextRequest) {
         type,
         licensePlate: licensePlate || null,
         monthlyFee: parseFloat(monthlyFee),
-        status: householdId ? 'occupied' : 'available',
-        householdId: householdId || null
+        status: memberId ? 'occupied' : 'available',
+        householdId: householdId || null,
+        memberId: memberId || null
       },
       include: {
-        household: true
+        household: true,
+        member: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            household: {
+              select: {
+                id: true,
+                unit: true,
+                phone: true
+              }
+            }
+          }
+        }
       }
     })
 

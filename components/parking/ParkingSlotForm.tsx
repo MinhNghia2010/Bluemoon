@@ -1,14 +1,26 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronDown, Car, Bike, Motorbike, Check, X, Plus, AlertCircle, User } from 'lucide-react';
+import { ChevronDown, Car, Bike, Motorbike, Check, X, Plus, AlertCircle, User, Trash2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ParkingSlot } from '../ParkingView';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 
 interface Member {
   id: string;
   name: string;
   cccd: string;
+  status: string;
+  residenceType: string;
   householdId?: string | null;
   household?: { id: string; unit: string; phone: string } | null;
 }
@@ -24,9 +36,12 @@ interface ParkingSlotFormProps {
   slot: ParkingSlot | null;
   onSave: (data: Partial<ParkingSlot>) => void;
   onCancel: () => void;
+  onDelete?: (id: string) => void;
+  totalSlots?: number;
+  maxSlots?: number;
 }
 
-export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps) {
+export function ParkingSlotForm({ slot, onSave, onCancel, onDelete, totalSlots = 0, maxSlots = 500 }: ParkingSlotFormProps) {
   const [formData, setFormData] = useState({
     slotNumber: slot?.slotNumber || '',
     unit: slot?.unit || '',
@@ -48,6 +63,9 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
   const [isCheckingSlot, setIsCheckingSlot] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showParkingFullAlert, setShowParkingFullAlert] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const memberRef = useRef<HTMLDivElement>(null);
   const vehicleTypeRef = useRef<HTMLDivElement>(null);
@@ -60,9 +78,8 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
         const res = await fetch('/api/members');
         if (res.ok) {
           const data = await res.json();
-          // Filter only living members with households
-          const livingMembers = data.filter((m: Member) => m.householdId);
-          setMembers(livingMembers);
+          // Include all members - any resident can own a vehicle
+          setMembers(data);
         }
       } catch (error) {
         console.error('Failed to fetch members:', error);
@@ -148,16 +165,38 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
       return;
     }
 
+    // Check if parking is full when adding a new slot
+    if (!slot && totalSlots >= maxSlots) {
+      setShowParkingFullAlert(true);
+      return;
+    }
+
     onSave({
       ...formData,
       monthlyFee: parseFloat(formData.monthlyFee),
       householdId: formData.householdId || undefined,
+      memberId: formData.memberId || undefined,
     });
     
     if (slot) {
       toast.success('Parking slot updated successfully!');
     } else {
       toast.success('Parking slot added successfully!');
+    }
+  };
+
+  const handleDeleteSlot = async () => {
+    if (!slot || !onDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await onDelete(slot.id);
+      toast.success('Parking slot deleted successfully!');
+      setShowDeleteAlert(false);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete parking slot');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -242,7 +281,7 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
     } else if (!isValidSlotFormat(formData.slotNumber)) {
       newErrors.slotNumber = 'Slot must be in format A-000 (e.g., A-001)';
     }
-    if (!formData.memberId && !formData.householdId) {
+    if (!formData.memberId) {
       newErrors.memberId = 'Vehicle owner is required';
     }
     if (!formData.vehicleType) newErrors.vehicleType = 'Vehicle type is required';
@@ -347,10 +386,18 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
                             <div className="w-8 h-8 rounded-full bg-brand-primary/20 flex items-center justify-center">
                               <User className="w-4 h-4 text-brand-primary" />
                             </div>
-                            <div>
-                              <p className="leading-tight font-medium">{member.name}</p>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="leading-tight font-medium">{member.name}</p>
+                                {member.status === 'moved_out' && (
+                                  <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">Moved Out</span>
+                                )}
+                                {member.residenceType === 'temporary' && (
+                                  <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">Temp</span>
+                                )}
+                              </div>
                               <p className="text-xs text-text-secondary">
-                                {member.household?.unit ? `Room ${member.household.unit}` : 'No room assigned'}
+                                {member.household?.unit ? `Room ${member.household.unit}` : member.status === 'moved_out' ? 'No current room' : 'No room assigned'}
                               </p>
                             </div>
                           </div>
@@ -499,23 +546,114 @@ export function ParkingSlotForm({ slot, onSave, onCancel }: ParkingSlotFormProps
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            {slot ? 'Update Slot' : 'Add Slot'}
-          </button>
+        <div className="flex gap-3 justify-between">
+          <div>
+            {slot && onDelete && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteAlert(true)}
+                className="flex items-center gap-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg font-medium text-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Vehicle
+              </button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn-primary flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              {slot ? 'Update Slot' : 'Add Slot'}
+            </button>
+          </div>
         </div>
       </form>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent className="bg-bg-white border-border-light p-0 overflow-hidden">
+          <div className="bg-red-500 px-6 py-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+              <AlertTriangle className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <AlertDialogTitle className="text-white text-lg font-semibold">
+                Delete Parking Slot
+              </AlertDialogTitle>
+              <p className="text-white/80 text-sm">This action cannot be undone</p>
+            </div>
+          </div>
+          
+          <div className="px-6 py-5">
+            <AlertDialogDescription className="text-text-secondary text-sm leading-relaxed">
+              Are you sure you want to delete parking slot <span className="font-semibold text-text-primary">{slot?.slotNumber}</span>?
+              {slot?.licensePlate && (
+                <>
+                  <br /><br />
+                  Vehicle with license plate <span className="font-semibold text-text-primary">{slot.licensePlate}</span> will be unregistered.
+                </>
+              )}
+            </AlertDialogDescription>
+          </div>
+
+          <AlertDialogFooter className="px-6 py-4 bg-bg-hover border-t border-border-light">
+            <AlertDialogCancel className="btn-secondary" disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteSlot();
+              }}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium text-sm disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Parking Full Alert */}
+      <AlertDialog open={showParkingFullAlert} onOpenChange={setShowParkingFullAlert}>
+        <AlertDialogContent className="bg-bg-white border-border-light p-0 overflow-hidden">
+          <div className="bg-orange-500 px-6 py-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+              <AlertCircle className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <AlertDialogTitle className="text-white text-lg font-semibold">
+                Parking Full
+              </AlertDialogTitle>
+              <p className="text-white/80 text-sm">Maximum capacity reached</p>
+            </div>
+          </div>
+          
+          <div className="px-6 py-5">
+            <AlertDialogDescription className="text-text-secondary text-sm leading-relaxed">
+              The parking area has reached its maximum capacity of <span className="font-semibold text-text-primary">{maxSlots}</span> vehicles.
+              <br /><br />
+              Please remove an existing vehicle before adding a new one, or contact building management to increase the parking capacity.
+            </AlertDialogDescription>
+          </div>
+
+          <AlertDialogFooter className="px-6 py-4 bg-bg-hover border-t border-border-light">
+            <AlertDialogAction
+              onClick={() => setShowParkingFullAlert(false)}
+              className="bg-brand-primary hover:bg-brand-primary/90 text-white px-4 py-2 rounded-lg font-medium text-sm"
+            >
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

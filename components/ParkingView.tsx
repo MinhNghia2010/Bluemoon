@@ -2,12 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Car, Plus } from 'lucide-react';
+import { Car, Plus, AlertCircle } from 'lucide-react';
 import { PageHeader } from './shared/PageHeader';
 import { FilterButtons } from './shared/FilterButtons';
 import { StatsGrid } from './shared/StatsGrid';
 import { parkingApi, householdsApi } from '@/lib/api';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 
 // Skeleton Components
 const ParkingSlotListSkeleton = () => (
@@ -82,9 +91,14 @@ export interface ParkingSlot {
   status: 'active' | 'inactive';
   phone: string;
   householdId?: string;
+  memberId?: string;
 }
 
 type ViewMode = 'list' | 'add' | 'edit';
+
+// Constants for parking limits
+const MAX_PARKING_SLOTS = 500;
+const MAX_PARKING_HOUSEHOLDS = 100;
 
 // Get initial state from localStorage
 const getInitialState = () => {
@@ -107,6 +121,7 @@ export function ParkingView() {
   const [viewMode, setViewMode] = useState<ViewMode>(initialState?.viewMode || 'list');
   const [selectedSlot, setSelectedSlot] = useState<ParkingSlot | null>(null);
   const [pendingSlotId, setPendingSlotId] = useState<string | null>(initialState?.selectedSlotId || null);
+  const [showParkingFullAlert, setShowParkingFullAlert] = useState(false);
 
   // Save view state to localStorage
   useEffect(() => {
@@ -136,14 +151,15 @@ export function ParkingView() {
       setParkingSlots(data.map((slot: any) => ({
         id: slot.id,
         slotNumber: slot.slotNumber,
-        unit: slot.household?.unit || 'Unassigned',
-        ownerName: slot.household?.ownerName || 'N/A',
+        unit: slot.vehicleOwner?.household?.unit || slot.household?.unit || 'Unassigned',
+        ownerName: slot.vehicleOwner?.name || 'N/A',
         vehicleType: slot.type as 'car' | 'motorcycle' | 'bicycle',
         licensePlate: slot.licensePlate || 'N/A',
         monthlyFee: slot.monthlyFee,
         status: slot.status === 'occupied' ? 'active' : 'inactive',
-        phone: slot.household?.phone || '',
-        householdId: slot.householdId
+        phone: slot.vehicleOwner?.household?.phone || slot.household?.phone || '',
+        householdId: slot.householdId,
+        memberId: slot.memberId
       })));
     } catch (error) {
       toast.error('Failed to load parking slots');
@@ -169,7 +185,8 @@ export function ParkingView() {
           type: data.vehicleType,
           licensePlate: data.licensePlate,
           monthlyFee: data.monthlyFee,
-          householdId: data.householdId
+          householdId: data.householdId,
+          memberId: data.memberId
         });
         toast.success('Parking slot updated successfully');
       } else {
@@ -178,7 +195,8 @@ export function ParkingView() {
           type: data.vehicleType,
           licensePlate: data.licensePlate,
           monthlyFee: data.monthlyFee,
-          householdId: data.householdId
+          householdId: data.householdId,
+          memberId: data.memberId
         });
         toast.success('Parking slot created successfully');
       }
@@ -191,12 +209,12 @@ export function ParkingView() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this parking slot?')) return;
-    
     try {
       await parkingApi.delete(id);
       toast.success('Parking slot deleted successfully');
       await fetchParkingSlots();
+      setViewMode('list');
+      setSelectedSlot(null);
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete parking slot');
     }
@@ -212,6 +230,14 @@ export function ParkingView() {
     setViewMode('edit');
   };
 
+  const handleAddParkingSlot = () => {
+    if (parkingSlots.length >= MAX_PARKING_SLOTS) {
+      setShowParkingFullAlert(true);
+      return;
+    }
+    setViewMode('add');
+  };
+
   // Show form for add or edit mode
   if (viewMode === 'add' || viewMode === 'edit') {
     return (
@@ -219,14 +245,14 @@ export function ParkingView() {
         slot={viewMode === 'edit' ? selectedSlot : null}
         onSave={handleSave}
         onCancel={handleCancel}
+        onDelete={handleDelete}
+        totalSlots={parkingSlots.length}
+        maxSlots={MAX_PARKING_SLOTS}
       />
     );
   }
 
   // Statistics - all vehicles (active and inactive) occupy slots
-  const MAX_PARKING_SLOTS = 500;
-  const MAX_PARKING_HOUSEHOLDS = 100;
-  
   // Count unique households
   const uniqueHouseholds = new Set(parkingSlots.filter(s => s.householdId).map(s => s.householdId)).size;
   
@@ -282,7 +308,7 @@ export function ParkingView() {
         title="Parking Management"
         description="Manage parking slots and vehicle registration"
         buttonLabel="Add Parking Slot"
-        onButtonClick={() => setViewMode('add')}
+        onButtonClick={handleAddParkingSlot}
       />
 
       {/* Statistics Cards */}
@@ -324,6 +350,42 @@ export function ParkingView() {
           onEdit={handleEdit}
         />
       )}
+
+      {/* Parking Full Alert */}
+      <AlertDialog open={showParkingFullAlert} onOpenChange={setShowParkingFullAlert}>
+        <AlertDialogContent className="bg-bg-white border-border-light p-0 overflow-hidden">
+          <div className="bg-orange-500 px-6 py-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+              <AlertCircle className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <AlertDialogTitle className="text-white text-lg font-semibold">
+                Parking Full
+              </AlertDialogTitle>
+              <p className="text-white/80 text-sm">Maximum capacity reached</p>
+            </div>
+          </div>
+          
+          <div className="px-6 py-5">
+            <AlertDialogDescription className="text-text-secondary text-sm leading-relaxed">
+              The parking area has reached its maximum capacity of <span className="font-semibold text-text-primary">{MAX_PARKING_SLOTS}</span> vehicles.
+              <br /><br />
+              Currently registered: <span className="font-semibold text-text-primary">{parkingSlots.length}</span> vehicles
+              <br /><br />
+              Please remove an existing vehicle before adding a new one, or contact building management to increase the parking capacity.
+            </AlertDialogDescription>
+          </div>
+
+          <AlertDialogFooter className="px-6 py-4 bg-bg-hover border-t border-border-light">
+            <AlertDialogAction
+              onClick={() => setShowParkingFullAlert(false)}
+              className="bg-brand-primary hover:bg-brand-primary/90 text-white px-4 py-2 rounded-lg font-medium text-sm"
+            >
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

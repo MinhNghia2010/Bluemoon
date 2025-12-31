@@ -201,6 +201,65 @@ export async function DELETE(
   try {
     const { id } = await params
 
+    // Check for unpaid fees (payments with status pending or overdue)
+    const unpaidPayments = await prisma.payment.findMany({
+      where: {
+        householdId: id,
+        status: { in: ['pending', 'overdue'] }
+      },
+      include: {
+        feeCategory: { select: { name: true } }
+      }
+    })
+
+    // Check for unpaid utility bills
+    const unpaidUtilityBills = await prisma.utilityBill.findMany({
+      where: {
+        householdId: id,
+        status: { in: ['pending', 'overdue'] }
+      }
+    })
+
+    // Check for parking slots with unpaid fees (occupied slots = active fees)
+    const parkingSlots = await prisma.parkingSlot.findMany({
+      where: {
+        householdId: id,
+        status: 'occupied'
+      }
+    })
+
+    // If there are any unpaid bills, return error with details
+    if (unpaidPayments.length > 0 || unpaidUtilityBills.length > 0 || parkingSlots.length > 0) {
+      const unpaidItems = []
+      
+      if (unpaidPayments.length > 0) {
+        const totalFees = unpaidPayments.reduce((sum, p) => sum + p.amount, 0)
+        unpaidItems.push(`${unpaidPayments.length} unpaid fee(s) totaling $${totalFees.toFixed(2)}`)
+      }
+      
+      if (unpaidUtilityBills.length > 0) {
+        const totalUtility = unpaidUtilityBills.reduce((sum, u) => sum + u.totalAmount, 0)
+        unpaidItems.push(`${unpaidUtilityBills.length} unpaid utility bill(s) totaling $${totalUtility.toFixed(2)}`)
+      }
+      
+      if (parkingSlots.length > 0) {
+        unpaidItems.push(`${parkingSlots.length} active parking slot(s) that need to be released`)
+      }
+
+      return NextResponse.json(
+        { 
+          error: 'Cannot delete household with unpaid bills',
+          hasUnpaidBills: true,
+          unpaidPayments: unpaidPayments.length,
+          unpaidUtilityBills: unpaidUtilityBills.length,
+          activeParkingSlots: parkingSlots.length,
+          details: unpaidItems.join(', ')
+        },
+        { status: 400 }
+      )
+    }
+
+    // If all bills are paid, proceed with deletion
     await prisma.household.delete({
       where: { id }
     })

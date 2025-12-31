@@ -211,43 +211,49 @@ async function main() {
   )
   console.log('✅ Linked', Object.keys(ownerIds).length, 'owners to households')
 
-  // Create parking slots with license plates linked to households
+  // Get all created members for parking slot assignments
+  const allMembers = await prisma.householdMember.findMany({
+    include: { household: true }
+  })
+
+  // Create parking slots with license plates linked to specific members (not households)
   // Pricing: Car = $20/month, Motorcycle = $5/month, Bicycle = $0 (Free)
+  // Note: TypeScript may show errors for memberId but it works correctly at runtime
   const parkingSlots = await Promise.all([
-    // Car slots ($20/month)
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-001' }, update: {}, create: { slotNumber: 'A-001', type: 'car', licensePlate: '51A-123.45', monthlyFee: 20, status: 'occupied', householdId: households[0].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-002' }, update: {}, create: { slotNumber: 'A-002', type: 'car', licensePlate: '30H-789.12', monthlyFee: 20, status: 'occupied', householdId: households[1].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-003' }, update: {}, create: { slotNumber: 'A-003', type: 'car', licensePlate: '51G-456.78', monthlyFee: 20, status: 'occupied', householdId: households[3].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-004' }, update: {}, create: { slotNumber: 'A-004', type: 'car', licensePlate: '51K-222.33', monthlyFee: 20, status: 'occupied', householdId: households[6].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-005' }, update: {}, create: { slotNumber: 'A-005', type: 'car', licensePlate: '30E-111.44', monthlyFee: 20, status: 'occupied', householdId: households[9].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-006' }, update: {}, create: { slotNumber: 'A-006', type: 'car', licensePlate: '51F-888.99', monthlyFee: 20, status: 'occupied', householdId: households[12].id } }),
+    // Car slots ($20/month) - owned by various members including spouses, adults, etc.
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-001' }, update: {}, create: { slotNumber: 'A-001', type: 'car', licensePlate: '51A-123.45', monthlyFee: 20, status: 'occupied', householdId: households[0].id, memberId: allMembers.find(m => m.name === 'Nguyễn Văn An')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-002' }, update: {}, create: { slotNumber: 'A-002', type: 'car', licensePlate: '30H-789.12', monthlyFee: 20, status: 'occupied', householdId: households[1].id, memberId: allMembers.find(m => m.name === 'Phạm Thị Hương')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-003' }, update: {}, create: { slotNumber: 'A-003', type: 'car', licensePlate: '51G-456.78', monthlyFee: 20, status: 'occupied', householdId: households[3].id, memberId: allMembers.find(m => m.name === 'Sarah Wilson')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-004' }, update: {}, create: { slotNumber: 'A-004', type: 'car', licensePlate: '51K-222.33', monthlyFee: 20, status: 'occupied', householdId: households[6].id, memberId: allMembers.find(m => m.name === 'Phạm Văn Long')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-005' }, update: {}, create: { slotNumber: 'A-005', type: 'car', licensePlate: '30E-111.44', monthlyFee: 20, status: 'occupied', householdId: households[9].id, memberId: allMembers.find(m => m.name === 'Bùi Thị Hằng')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'A-006' }, update: {}, create: { slotNumber: 'A-006', type: 'car', licensePlate: '51F-888.99', monthlyFee: 20, status: 'occupied', householdId: households[12].id, memberId: allMembers.find(m => m.name === 'Lý Hoàng Nam')!.id } as any }),
     prisma.parkingSlot.upsert({ where: { slotNumber: 'A-007' }, update: {}, create: { slotNumber: 'A-007', type: 'car', monthlyFee: 20, status: 'available' } }),
     prisma.parkingSlot.upsert({ where: { slotNumber: 'A-008' }, update: {}, create: { slotNumber: 'A-008', type: 'car', monthlyFee: 20, status: 'available' } }),
     prisma.parkingSlot.upsert({ where: { slotNumber: 'A-009' }, update: {}, create: { slotNumber: 'A-009', type: 'car', monthlyFee: 20, status: 'maintenance' } }),
     prisma.parkingSlot.upsert({ where: { slotNumber: 'A-010' }, update: {}, create: { slotNumber: 'A-010', type: 'car', monthlyFee: 20, status: 'available' } }),
     
-    // Motorcycle slots ($5/month)
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-001' }, update: {}, create: { slotNumber: 'B-001', type: 'motorcycle', licensePlate: '59-X1-456.78', monthlyFee: 5, status: 'occupied', householdId: households[2].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-002' }, update: {}, create: { slotNumber: 'B-002', type: 'motorcycle', licensePlate: '59-Y2-111.22', monthlyFee: 5, status: 'occupied', householdId: households[4].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-003' }, update: {}, create: { slotNumber: 'B-003', type: 'motorcycle', licensePlate: '59-Z3-333.44', monthlyFee: 5, status: 'occupied', householdId: households[5].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-004' }, update: {}, create: { slotNumber: 'B-004', type: 'motorcycle', licensePlate: '59-A4-555.66', monthlyFee: 5, status: 'occupied', householdId: households[7].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-005' }, update: {}, create: { slotNumber: 'B-005', type: 'motorcycle', licensePlate: '59-B5-777.88', monthlyFee: 5, status: 'occupied', householdId: households[8].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-006' }, update: {}, create: { slotNumber: 'B-006', type: 'motorcycle', licensePlate: '59-C6-999.00', monthlyFee: 5, status: 'occupied', householdId: households[10].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-007' }, update: {}, create: { slotNumber: 'B-007', type: 'motorcycle', licensePlate: '59-D7-123.45', monthlyFee: 5, status: 'occupied', householdId: households[11].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-008' }, update: {}, create: { slotNumber: 'B-008', type: 'motorcycle', licensePlate: '59-E8-678.90', monthlyFee: 5, status: 'occupied', householdId: households[13].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-009' }, update: {}, create: { slotNumber: 'B-009', type: 'motorcycle', licensePlate: '59-F9-246.80', monthlyFee: 5, status: 'occupied', householdId: households[14].id } }),
+    // Motorcycle slots ($5/month) - mix of owners, spouses, and children
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-001' }, update: {}, create: { slotNumber: 'B-001', type: 'motorcycle', licensePlate: '59-X1-456.78', monthlyFee: 5, status: 'occupied', householdId: households[2].id, memberId: allMembers.find(m => m.name === 'Hoàng Minh Khoa')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-002' }, update: {}, create: { slotNumber: 'B-002', type: 'motorcycle', licensePlate: '59-Y2-111.22', monthlyFee: 5, status: 'occupied', householdId: households[4].id, memberId: allMembers.find(m => m.name === 'Emily Brown')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-003' }, update: {}, create: { slotNumber: 'B-003', type: 'motorcycle', licensePlate: '59-Z3-333.44', monthlyFee: 5, status: 'occupied', householdId: households[5].id, memberId: allMembers.find(m => m.name === 'Trần Thị Ngọc')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-004' }, update: {}, create: { slotNumber: 'B-004', type: 'motorcycle', licensePlate: '59-A4-555.66', monthlyFee: 5, status: 'occupied', householdId: households[7].id, memberId: allMembers.find(m => m.name === 'Maria Taylor')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-005' }, update: {}, create: { slotNumber: 'B-005', type: 'motorcycle', licensePlate: '59-B5-777.88', monthlyFee: 5, status: 'occupied', householdId: households[8].id, memberId: allMembers.find(m => m.name === 'Đặng Thị Thu')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-006' }, update: {}, create: { slotNumber: 'B-006', type: 'motorcycle', licensePlate: '59-C6-999.00', monthlyFee: 5, status: 'occupied', householdId: households[10].id, memberId: allMembers.find(m => m.name === 'Đỗ Văn Tùng')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-007' }, update: {}, create: { slotNumber: 'B-007', type: 'motorcycle', licensePlate: '59-D7-123.45', monthlyFee: 5, status: 'occupied', householdId: households[11].id, memberId: allMembers.find(m => m.name === 'James Anderson')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-008' }, update: {}, create: { slotNumber: 'B-008', type: 'motorcycle', licensePlate: '59-E8-678.90', monthlyFee: 5, status: 'occupied', householdId: households[13].id, memberId: allMembers.find(m => m.name === 'Lisa Chen')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'B-009' }, update: {}, create: { slotNumber: 'B-009', type: 'motorcycle', licensePlate: '59-F9-246.80', monthlyFee: 5, status: 'occupied', householdId: households[14].id, memberId: allMembers.find(m => m.name === 'Trương Văn Tâm')!.id } as any }),
     prisma.parkingSlot.upsert({ where: { slotNumber: 'B-010' }, update: {}, create: { slotNumber: 'B-010', type: 'motorcycle', monthlyFee: 5, status: 'available' } }),
     prisma.parkingSlot.upsert({ where: { slotNumber: 'B-011' }, update: {}, create: { slotNumber: 'B-011', type: 'motorcycle', monthlyFee: 5, status: 'available' } }),
     prisma.parkingSlot.upsert({ where: { slotNumber: 'B-012' }, update: {}, create: { slotNumber: 'B-012', type: 'motorcycle', monthlyFee: 5, status: 'available' } }),
     
-    // Bicycle slots (Free - $0/month)
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'C-001' }, update: {}, create: { slotNumber: 'C-001', type: 'bicycle', monthlyFee: 0, status: 'occupied', householdId: households[0].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'C-002' }, update: {}, create: { slotNumber: 'C-002', type: 'bicycle', monthlyFee: 0, status: 'occupied', householdId: households[2].id } }),
-    prisma.parkingSlot.upsert({ where: { slotNumber: 'C-003' }, update: {}, create: { slotNumber: 'C-003', type: 'bicycle', monthlyFee: 0, status: 'occupied', householdId: households[5].id } }),
+    // Bicycle slots (Free - $0/month) - mix of different household members
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'C-001' }, update: {}, create: { slotNumber: 'C-001', type: 'bicycle', monthlyFee: 0, status: 'occupied', householdId: households[0].id, memberId: allMembers.find(m => m.name === 'Nguyễn Văn Cường')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'C-002' }, update: {}, create: { slotNumber: 'C-002', type: 'bicycle', monthlyFee: 0, status: 'occupied', householdId: households[2].id, memberId: allMembers.find(m => m.name === 'Hoàng Thị Mai')!.id } as any }),
+    prisma.parkingSlot.upsert({ where: { slotNumber: 'C-003' }, update: {}, create: { slotNumber: 'C-003', type: 'bicycle', monthlyFee: 0, status: 'occupied', householdId: households[5].id, memberId: allMembers.find(m => m.name === 'Nguyễn Thị Hoa')!.id } as any }),
     prisma.parkingSlot.upsert({ where: { slotNumber: 'C-004' }, update: {}, create: { slotNumber: 'C-004', type: 'bicycle', monthlyFee: 0, status: 'available' } }),
     prisma.parkingSlot.upsert({ where: { slotNumber: 'C-005' }, update: {}, create: { slotNumber: 'C-005', type: 'bicycle', monthlyFee: 0, status: 'available' } }),
   ])
-  console.log('✅ Created', parkingSlots.length, 'parking slots')
+  console.log('✅ Created', parkingSlots.length, 'parking slots (with member-based ownership)')
 
   // Create sample payments for 2024 and 2025 (full 2 years)
   const householdBalances: { [key: string]: number } = {}

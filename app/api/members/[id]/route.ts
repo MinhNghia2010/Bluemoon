@@ -242,7 +242,15 @@ export async function DELETE(
 ) {
   try {
     const member = await prisma.householdMember.findUnique({
-      where: { id: params.id }
+      where: { id: params.id },
+      include: {
+        ownedHousehold: {
+          select: { id: true, unit: true }
+        },
+        household: {
+          select: { id: true }
+        }
+      }
     })
 
     if (!member) {
@@ -251,6 +259,50 @@ export async function DELETE(
         { status: 404 }
       )
     }
+
+    // Check if this is an owner - owners cannot be deleted directly
+    if (member.ownedHousehold) {
+      // Check if the household has unpaid bills
+      const householdId = member.ownedHousehold.id
+      
+      const [unpaidPayments, unpaidUtilityBills, activeParkingSlots] = await Promise.all([
+        prisma.payment.count({
+          where: {
+            householdId,
+            status: { in: ['pending', 'overdue'] }
+          }
+        }),
+        prisma.utilityBill.count({
+          where: {
+            householdId,
+            status: { in: ['pending', 'overdue'] }
+          }
+        }),
+        prisma.parkingSlot.count({
+          where: {
+            householdId,
+            status: 'occupied'
+          }
+        })
+      ])
+
+      if (unpaidPayments > 0 || unpaidUtilityBills > 0 || activeParkingSlots > 0) {
+        return NextResponse.json(
+          { 
+            error: 'Cannot delete owner with unpaid bills',
+            isOwner: true,
+            hasUnpaidBills: true,
+            unpaidPayments,
+            unpaidUtilityBills,
+            activeParkingSlots,
+            message: `The owner of Room ${member.ownedHousehold.unit} cannot be deleted because there are outstanding bills. Please ensure all payments are collected first.`
+          },
+          { status: 400 }
+        )
+      }
+    }
+
+    // When a member is deleted, their owned vehicles are automatically deleted due to CASCADE
 
     await prisma.householdMember.delete({
       where: { id: params.id }

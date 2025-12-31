@@ -77,6 +77,9 @@ model HouseholdMember {
   // Owner of households (a member can be owner of one household)
   ownedHousehold Household? @relation("HouseholdOwner")
 
+  // Vehicles owned by this member
+  ownedVehicles ParkingSlot[]
+
   // Temporary absence records (when they're temporarily away)
   temporaryAbsences TemporaryAbsence[]
   
@@ -181,10 +184,13 @@ model ParkingSlot {
   // Relations
   householdId String?
   household   Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  memberId    String?
+  member      HouseholdMember? @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   // Indexes for faster queries
   @@index([type])
   @@index([householdId])
+  @@index([memberId])
   @@index([status])
 }
 

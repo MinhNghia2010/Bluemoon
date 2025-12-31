@@ -236,15 +236,11 @@ export function HouseholdsView() {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await householdsApi.delete(id);
-      toast.success('Household deleted successfully');
-      setShowModal(false);
-      setSelectedHousehold(null);
-      await fetchHouseholds();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete household');
-    }
+    // The delete is now handled inside HouseholdDetailModal
+    // This function is called after successful deletion from the modal
+    setShowModal(false);
+    setSelectedHousehold(null);
+    await fetchHouseholds();
   };
 
   const handleCancel = () => {

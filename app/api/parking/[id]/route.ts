@@ -68,13 +68,26 @@ export async function PUT(
     if (data.status) updateData.status = data.status
     if (data.licensePlate !== undefined) updateData.licensePlate = data.licensePlate || null
 
-    // Handle assignment/unassignment
+    // Handle member assignment (vehicle ownership)
+    if (data.memberId !== undefined) {
+      updateData.memberId = data.memberId || null
+      updateData.status = data.memberId ? 'occupied' : 'available'
+      // Clear license plate if unassigning
+      if (!data.memberId) {
+        updateData.licensePlate = null
+      }
+    }
+
+    // Handle household assignment (for backward compatibility)
     if (data.householdId !== undefined) {
       updateData.householdId = data.householdId || null
-      updateData.status = data.householdId ? 'occupied' : 'available'
-      // Clear license plate if unassigning
-      if (!data.householdId) {
-        updateData.licensePlate = null
+      // Don't override status if we have a member assigned
+      if (!data.memberId) {
+        updateData.status = data.householdId ? 'occupied' : 'available'
+        // Clear license plate if unassigning
+        if (!data.householdId) {
+          updateData.licensePlate = null
+        }
       }
     }
 
@@ -82,7 +95,21 @@ export async function PUT(
       where: { id },
       data: updateData,
       include: {
-        household: true
+        household: true,
+        member: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            household: {
+              select: {
+                id: true,
+                unit: true,
+                phone: true
+              }
+            }
+          }
+        }
       }
     })
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, AlertTriangle, Plus, UserMinus, Edit2, Building2, CalendarIcon, Maximize2, Layers, Phone, Mail, Check, X, Clock, Plane, Home, UserX } from 'lucide-react';
+import { Trash2, AlertTriangle, Plus, UserMinus, Edit2, Building2, CalendarIcon, Maximize2, Layers, Phone, Mail, Check, X, Clock, Plane, Home, UserX, Ban } from 'lucide-react';
 import { Modal } from '../shared/Modal';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -63,11 +63,15 @@ interface HouseholdDetailModalProps {
 
 export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onMembersChange }: HouseholdDetailModalProps) {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showUnpaidBillsAlert, setShowUnpaidBillsAlert] = useState(false);
+  const [unpaidBillsDetails, setUnpaidBillsDetails] = useState<string>('');
   const [showAddMember, setShowAddMember] = useState(false);
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<HouseholdMember | null>(null);
   const [showRemoveMemberAlert, setShowRemoveMemberAlert] = useState(false);
+  const [showCannotRemoveOwnerAlert, setShowCannotRemoveOwnerAlert] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Helper function to get residence status badge
   const getResidenceStatusBadge = (member: HouseholdMember) => {
@@ -138,11 +142,18 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
   const handleRemoveMember = async () => {
     if (!memberToRemove) return;
     
+    // Check if this is the owner - owners can only be moved out, not removed directly
+    if (memberToRemove.isOwner) {
+      setShowRemoveMemberAlert(false);
+      setShowCannotRemoveOwnerAlert(true);
+      return;
+    }
+    
     try {
       const res = await fetch(`/api/members/${memberToRemove.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ householdId: null })
+        body: JSON.stringify({ householdId: null, status: 'moved_out', moveOutDate: new Date().toISOString() })
       });
       
       if (!res.ok) throw new Error('Failed to remove member');
@@ -155,6 +166,39 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
     } catch (error) {
       console.error('Error removing member:', error);
       toast.error('Failed to remove member');
+    }
+  };
+
+  const handleDeleteHousehold = async () => {
+    if (!household || !onDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/households/${household.id}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        if (data.hasUnpaidBills) {
+          // Show unpaid bills alert instead of deleting
+          setShowDeleteAlert(false);
+          setUnpaidBillsDetails(data.details);
+          setShowUnpaidBillsAlert(true);
+          return;
+        }
+        throw new Error(data.error || 'Failed to delete household');
+      }
+      
+      toast.success('Household deleted successfully');
+      setShowDeleteAlert(false);
+      onDelete();
+    } catch (error: any) {
+      console.error('Error deleting household:', error);
+      toast.error(error.message || 'Failed to delete household');
+    } finally {
+      setIsDeleting(false);
     }
   };
   
@@ -319,7 +363,7 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
                         className="w-12 h-12 rounded-full object-cover shrink-0"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-primary to-brand-primary/70 flex items-center justify-center shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-linear-to-br from-brand-primary to-brand-primary/70 flex items-center justify-center shrink-0">
                         <span className="text-white font-semibold text-lg">
                           {member.name.charAt(0).toUpperCase()}
                         </span>
@@ -439,15 +483,97 @@ export function HouseholdDetailModal({ household, onClose, onEdit, onDelete, onM
           </div>
 
           <AlertDialogFooter className="px-6 py-4 bg-bg-hover border-t border-border-light">
-            <AlertDialogCancel className="btn-secondary">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="btn-secondary" disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteHousehold();
+              }}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium text-sm disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Unpaid Bills Alert */}
+      <AlertDialog open={showUnpaidBillsAlert} onOpenChange={setShowUnpaidBillsAlert}>
+        <AlertDialogContent className="bg-bg-white border-border-light p-0 overflow-hidden">
+          <div className="bg-orange-500 px-6 py-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+              <Ban className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <AlertDialogTitle className="text-white text-lg font-semibold">
+                Cannot Delete Household
+              </AlertDialogTitle>
+              <p className="text-white/80 text-sm">Outstanding bills must be settled first</p>
+            </div>
+          </div>
+          
+          <div className="px-6 py-5">
+            <AlertDialogDescription className="text-text-secondary text-sm leading-relaxed">
+              <span className="font-semibold text-text-primary">Room {household.unit}</span> cannot be deleted because there are outstanding bills or fees that haven't been paid yet.
+              <br /><br />
+              <span className="font-medium text-orange-600">Outstanding items:</span>
+              <br />
+              {unpaidBillsDetails}
+              <br /><br />
+              Please ensure all payments are collected and parking slots are released before deleting this household.
+            </AlertDialogDescription>
+          </div>
+
+          <AlertDialogFooter className="px-6 py-4 bg-bg-hover border-t border-border-light">
+            <AlertDialogAction
+              onClick={() => setShowUnpaidBillsAlert(false)}
+              className="bg-brand-primary hover:bg-brand-primary/90 text-white px-4 py-2 rounded-lg font-medium text-sm"
+            >
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cannot Remove Owner Alert */}
+      <AlertDialog open={showCannotRemoveOwnerAlert} onOpenChange={setShowCannotRemoveOwnerAlert}>
+        <AlertDialogContent className="bg-bg-white border-border-light p-0 overflow-hidden">
+          <div className="bg-orange-500 px-6 py-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+              <Ban className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <AlertDialogTitle className="text-white text-lg font-semibold">
+                Cannot Remove Owner
+              </AlertDialogTitle>
+              <p className="text-white/80 text-sm">Owner requires special handling</p>
+            </div>
+          </div>
+          
+          <div className="px-6 py-5">
+            <AlertDialogDescription className="text-text-secondary text-sm leading-relaxed">
+              <span className="font-semibold text-text-primary">{memberToRemove?.name}</span> is the owner of this household and cannot be directly removed.
+              <br /><br />
+              The owner can only be:
+              <ul className="list-disc ml-4 mt-2 space-y-1">
+                <li>Moved out (which requires selecting a new owner)</li>
+                <li>Deleted only after all household bills are paid</li>
+              </ul>
+              <br />
+              Please use the "Edit Household" option to change ownership or mark the owner as moved out.
+            </AlertDialogDescription>
+          </div>
+
+          <AlertDialogFooter className="px-6 py-4 bg-bg-hover border-t border-border-light">
             <AlertDialogAction
               onClick={() => {
-                onDelete?.();
-                setShowDeleteAlert(false);
+                setShowCannotRemoveOwnerAlert(false);
+                setMemberToRemove(null);
               }}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium text-sm"
+              className="bg-brand-primary hover:bg-brand-primary/90 text-white px-4 py-2 rounded-lg font-medium text-sm"
             >
-              Delete
+              Understood
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
