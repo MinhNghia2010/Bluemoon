@@ -67,15 +67,20 @@ export async function PUT(
     if (data.licensePlate !== undefined) updateData.licensePlate = data.licensePlate || null
 
     // Handle member assignment (vehicle ownership)
-    if (data.memberId !== undefined) {
-      const hasOwner = !!data.memberId
-      updateData.memberId = data.memberId || null
+    // Check if memberId is being set (including to empty string or null to clear)
+    const isMemberIdProvided = 'memberId' in data
+    if (isMemberIdProvided) {
+      // Treat empty string as null (no owner)
+      const memberId = data.memberId && data.memberId.trim() !== '' ? data.memberId : null
+      const hasOwner = !!memberId
+      updateData.memberId = memberId
       // Auto-set status based on owner
       updateData.status = hasOwner ? 'occupied' : 'available'
-      // If no owner, set monthly fee to 0 (no one to pay)
+      // If no owner, set monthly fee to 0 (no one to pay) and clear related fields
       if (!hasOwner) {
         updateData.monthlyFee = 0
         updateData.licensePlate = null
+        updateData.householdId = null // Also clear household when no owner
       } else if (data.monthlyFee !== undefined) {
         updateData.monthlyFee = parseFloat(data.monthlyFee)
       }
@@ -84,12 +89,12 @@ export async function PUT(
     }
 
     // Handle explicit status override (only if memberId not being changed)
-    if (data.status && data.memberId === undefined) {
+    if (data.status && !isMemberIdProvided) {
       updateData.status = data.status
     }
 
-    // Handle household assignment (for backward compatibility)
-    if (data.householdId !== undefined) {
+    // Handle household assignment (for backward compatibility, only if not cleared by memberId logic)
+    if ('householdId' in data && !('memberId' in data && !data.memberId)) {
       updateData.householdId = data.householdId || null
     }
 

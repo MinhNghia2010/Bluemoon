@@ -180,13 +180,14 @@ export function ParkingView() {
   const handleSave = async (data: Partial<ParkingSlot>) => {
     try {
       if (viewMode === 'edit' && selectedSlot) {
+        // Always pass memberId (even if empty/null) so API knows to clear owner
         await parkingApi.update(selectedSlot.id, {
           slotNumber: data.slotNumber,
           type: data.vehicleType,
           licensePlate: data.licensePlate,
           monthlyFee: data.monthlyFee,
-          householdId: data.householdId,
-          memberId: data.memberId
+          householdId: data.householdId || null,
+          memberId: data.memberId || null // Pass null explicitly to clear owner
         });
         toast.success('Parking slot updated successfully');
       } else {

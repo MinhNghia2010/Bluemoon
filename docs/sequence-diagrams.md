@@ -596,10 +596,18 @@ sequenceDiagram
     Admin->>View: Click "Add Parking Slot"
     View-->>Admin: Hiển thị form đăng ký
     
-    Admin->>View: Nhập thông tin<br/>(slotNumber, type, licensePlate, monthlyFee, householdId, memberId)
+    Admin->>View: Nhập thông tin<br/>(slotNumber, type, licensePlate, memberId - optional)
+    View->>View: Validate form (slotNumber, type required)
+    
+    alt memberId được chọn
+        View->>View: Set monthlyFee theo loại xe<br/>Set status = 'active'
+    else Không có memberId
+        View->>View: Set monthlyFee = $0 (no one to pay)<br/>Set status = 'inactive'
+    end
+    
     View->>Controller: POST /api/parking
     
-    Controller->>Controller: Validate required fields
+    Controller->>Controller: Validate required fields<br/>(slotNumber, type)
     
     Controller->>Model: findFirst({slotNumber})
     alt Slot đã tồn tại
@@ -608,7 +616,10 @@ sequenceDiagram
         View-->>Admin: Hiển thị lỗi
     end
     
-    Controller->>Model: create({slotNumber, type, licensePlate,<br/>monthlyFee, householdId, memberId, status: 'occupied'})
+    Controller->>Controller: Calculate status & fee
+    Note over Controller: hasOwner = !!memberId<br/>monthlyFee = hasOwner ? fee : 0<br/>status = hasOwner ? 'occupied' : 'available'
+    
+    Controller->>Model: create({slotNumber, type, licensePlate,<br/>monthlyFee, householdId, memberId, status})
     Model-->>Controller: New parking slot
     
     Controller-->>View: 201 - Slot created
@@ -643,6 +654,51 @@ sequenceDiagram
     View->>View: Calculate stats:<br/>- Total slots<br/>- Occupied<br/>- Available
     
     View-->>Admin: Hiển thị bãi đỗ xe
+```
+
+### 6.3 Cập Nhật Chỗ Đỗ Xe
+
+```mermaid
+%%{init: {'theme': 'dark'}}%%
+sequenceDiagram
+    autonumber
+    participant Admin as Admin
+    participant View as ParkingSlotForm<br/><<Boundary>>
+    participant Controller as ParkingController<br/><<Control>>
+    participant Model as ParkingSlot<br/><<Entity>>
+    
+    Admin->>View: Click vào slot để chỉnh sửa
+    View-->>Admin: Hiển thị form với dữ liệu hiện tại
+    
+    Admin->>View: Chỉnh sửa thông tin<br/>(có thể xóa owner để set $0)
+    
+    alt Xóa Owner (Clear Owner)
+        View->>View: Set monthlyFee = $0<br/>Set status = 'inactive'<br/>Clear householdId, unit, phone
+    end
+    
+    alt Gán Owner mới
+        View->>View: Set monthlyFee theo loại xe<br/>Set status = 'active'<br/>Auto-fill unit, phone từ member
+    end
+    
+    View->>Controller: PUT /api/parking/{id}
+    
+    Controller->>Model: findFirst({slotNumber, NOT: id})
+    alt Slot number trùng
+        Controller-->>View: 400 - Slot number already exists
+    end
+    
+    Controller->>Controller: Calculate status & fee
+    Note over Controller: hasOwner = !!memberId<br/>status = hasOwner ? 'occupied' : 'available'<br/>monthlyFee = hasOwner ? fee : 0
+    
+    alt Không có owner
+        Controller->>Controller: Set monthlyFee = 0<br/>Clear licensePlate
+    end
+    
+    Controller->>Model: update({slotNumber, type, licensePlate,<br/>monthlyFee, memberId, status})
+    Model-->>Controller: Updated parking slot
+    
+    Controller-->>View: 200 - Slot updated
+    View-->>Admin: Cập nhật thành công
 ```
 
 ---
