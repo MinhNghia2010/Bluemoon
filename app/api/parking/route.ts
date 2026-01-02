@@ -99,9 +99,9 @@ export async function POST(request: NextRequest) {
 
     const { slotNumber, type, monthlyFee, householdId, memberId, licensePlate } = data
 
-    if (!slotNumber || !type || !monthlyFee) {
+    if (!slotNumber || !type) {
       return NextResponse.json(
-        { error: 'Slot number, type, and monthly fee are required' },
+        { error: 'Slot number and type are required' },
         { status: 400 }
       )
     }
@@ -118,13 +118,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // If no owner (memberId), set fee to 0 and status to available
+    const hasOwner = !!memberId
+    const finalMonthlyFee = hasOwner ? parseFloat(monthlyFee || '0') : 0
+    const finalStatus = hasOwner ? 'occupied' : 'available'
+
     const parkingSlot = await prisma.parkingSlot.create({
       data: {
         slotNumber,
         type,
         licensePlate: licensePlate || null,
-        monthlyFee: parseFloat(monthlyFee),
-        status: memberId ? 'occupied' : 'available',
+        monthlyFee: finalMonthlyFee,
+        status: finalStatus,
         householdId: householdId || null,
         memberId: memberId || null
       },

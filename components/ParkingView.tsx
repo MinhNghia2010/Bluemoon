@@ -152,7 +152,7 @@ export function ParkingView() {
         id: slot.id,
         slotNumber: slot.slotNumber,
         unit: slot.vehicleOwner?.household?.unit || slot.household?.unit || 'Unassigned',
-        ownerName: slot.vehicleOwner?.name || 'N/A',
+        ownerName: slot.vehicleOwner?.name || (slot.memberId ? 'Unknown' : 'No Owner'),
         vehicleType: slot.type as 'car' | 'motorcycle' | 'bicycle',
         licensePlate: slot.licensePlate || 'N/A',
         monthlyFee: slot.monthlyFee,

@@ -64,31 +64,33 @@ export async function PUT(
     }
 
     if (data.type) updateData.type = data.type
-    if (data.monthlyFee !== undefined) updateData.monthlyFee = parseFloat(data.monthlyFee)
-    if (data.status) updateData.status = data.status
     if (data.licensePlate !== undefined) updateData.licensePlate = data.licensePlate || null
 
     // Handle member assignment (vehicle ownership)
     if (data.memberId !== undefined) {
+      const hasOwner = !!data.memberId
       updateData.memberId = data.memberId || null
-      updateData.status = data.memberId ? 'occupied' : 'available'
-      // Clear license plate if unassigning
-      if (!data.memberId) {
+      // Auto-set status based on owner
+      updateData.status = hasOwner ? 'occupied' : 'available'
+      // If no owner, set monthly fee to 0 (no one to pay)
+      if (!hasOwner) {
+        updateData.monthlyFee = 0
         updateData.licensePlate = null
+      } else if (data.monthlyFee !== undefined) {
+        updateData.monthlyFee = parseFloat(data.monthlyFee)
       }
+    } else if (data.monthlyFee !== undefined) {
+      updateData.monthlyFee = parseFloat(data.monthlyFee)
+    }
+
+    // Handle explicit status override (only if memberId not being changed)
+    if (data.status && data.memberId === undefined) {
+      updateData.status = data.status
     }
 
     // Handle household assignment (for backward compatibility)
     if (data.householdId !== undefined) {
       updateData.householdId = data.householdId || null
-      // Don't override status if we have a member assigned
-      if (!data.memberId) {
-        updateData.status = data.householdId ? 'occupied' : 'available'
-        // Clear license plate if unassigning
-        if (!data.householdId) {
-          updateData.licensePlate = null
-        }
-      }
     }
 
     const parkingSlot = await prisma.parkingSlot.update({

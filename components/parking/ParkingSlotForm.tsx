@@ -42,17 +42,23 @@ interface ParkingSlotFormProps {
 }
 
 export function ParkingSlotForm({ slot, onSave, onCancel, onDelete, totalSlots = 0, maxSlots = 500 }: ParkingSlotFormProps) {
+  // Initialize form - if editing existing slot with no owner, set fee to 0
+  const initialFee = () => {
+    if (slot?.monthlyFee !== undefined) return slot.monthlyFee.toString();
+    return VEHICLE_PRICES.car.toString();
+  };
+
   const [formData, setFormData] = useState({
     slotNumber: slot?.slotNumber || '',
     unit: slot?.unit || '',
     ownerName: slot?.ownerName || '',
     vehicleType: slot?.vehicleType || 'car',
     licensePlate: slot?.licensePlate || '',
-    monthlyFee: slot?.monthlyFee?.toString() || VEHICLE_PRICES.car.toString(),
+    monthlyFee: initialFee(),
     status: slot?.status || 'active',
     phone: slot?.phone || '',
     householdId: slot?.householdId || '',
-    memberId: '',
+    memberId: slot?.memberId || '',
   });
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -143,6 +149,7 @@ export function ParkingSlotForm({ slot, onSave, onCancel, onDelete, totalSlots =
   }, []);
 
   const handleMemberSelect = (member: Member) => {
+    const price = VEHICLE_PRICES[formData.vehicleType as keyof typeof VEHICLE_PRICES];
     setFormData(prev => ({
       ...prev,
       memberId: member.id,
@@ -150,11 +157,27 @@ export function ParkingSlotForm({ slot, onSave, onCancel, onDelete, totalSlots =
       unit: member.household?.unit || '',
       phone: member.household?.phone || '',
       householdId: member.householdId || '',
+      monthlyFee: price.toString(), // Set price based on vehicle type when owner is assigned
+      status: 'active', // Auto-set status to active when owner is assigned
     }));
     setIsMemberOpen(false);
     if (errors.memberId) {
       setErrors(prev => ({ ...prev, memberId: '' }));
     }
+  };
+
+  // Clear vehicle owner - sets cost to $0 and status to inactive
+  const handleClearOwner = () => {
+    setFormData(prev => ({
+      ...prev,
+      memberId: '',
+      ownerName: '',
+      unit: '',
+      phone: '',
+      householdId: '',
+      monthlyFee: '0', // No owner means $0 (no one to pay)
+      status: 'inactive', // Auto-set status to inactive when no owner
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -207,9 +230,10 @@ export function ParkingSlotForm({ slot, onSave, onCancel, onDelete, totalSlots =
     }
   };
 
-  // Handle vehicle type change - auto-update price
+  // Handle vehicle type change - auto-update price (only if owner exists)
   const handleVehicleTypeChange = (type: 'car' | 'motorcycle' | 'bicycle') => {
-    const price = VEHICLE_PRICES[type];
+    // If no owner, price stays at $0
+    const price = formData.memberId ? VEHICLE_PRICES[type] : 0;
     setFormData(prev => ({
       ...prev,
       vehicleType: type,
@@ -281,9 +305,7 @@ export function ParkingSlotForm({ slot, onSave, onCancel, onDelete, totalSlots =
     } else if (!isValidSlotFormat(formData.slotNumber)) {
       newErrors.slotNumber = 'Slot must be in format A-000 (e.g., A-001)';
     }
-    if (!formData.memberId) {
-      newErrors.memberId = 'Vehicle owner is required';
-    }
+    // Owner is now optional - no owner means $0 cost (no one to pay)
     if (!formData.vehicleType) newErrors.vehicleType = 'Vehicle type is required';
 
     setErrors(newErrors);
@@ -343,33 +365,45 @@ export function ParkingSlotForm({ slot, onSave, onCancel, onDelete, totalSlots =
             </div>
 
             <div>
-              <label className="text-sm font-medium text-text-primary mb-2 block">Vehicle Owner *</label>
+              <label className="text-sm font-medium text-text-primary mb-2 block">Vehicle Owner <span className="text-text-secondary font-normal">(Optional)</span></label>
               <div className="relative" ref={memberRef}>
-                <button
-                  type="button"
-                  className={`input-default text-sm flex items-center justify-between ${formData.ownerName ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.memberId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                  onClick={() => setIsMemberOpen(!isMemberOpen)}
-                >
-                  <div className="flex items-center gap-2">
-                    {formData.ownerName ? (
-                      <>
-                        <User className="w-4 h-4 text-brand-primary" />
-                        <span className="text-text-primary">{formData.ownerName}</span>
-                        {formData.unit && (
-                          <span className="text-text-secondary text-xs">(Room {formData.unit})</span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-text-secondary">Select vehicle owner</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {formData.ownerName && (
-                      <Check className="w-4 h-4 text-green-500" />
-                    )}
-                    <ChevronDown className={`size-4 text-text-secondary transition-transform ${isMemberOpen ? 'rotate-180' : ''}`} />
-                  </div>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={`input-default text-sm flex items-center justify-between flex-1 ${formData.ownerName ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : ''}`}
+                    onClick={() => setIsMemberOpen(!isMemberOpen)}
+                  >
+                    <div className="flex items-center gap-2">
+                      {formData.ownerName ? (
+                        <>
+                          <User className="w-4 h-4 text-brand-primary" />
+                          <span className="text-text-primary">{formData.ownerName}</span>
+                          {formData.unit && (
+                            <span className="text-text-secondary text-xs">(Room {formData.unit})</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-text-secondary">No owner (Cost: $0)</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {formData.ownerName && (
+                        <Check className="w-4 h-4 text-green-500" />
+                      )}
+                      <ChevronDown className={`size-4 text-text-secondary transition-transform ${isMemberOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+                  {formData.ownerName && (
+                    <button
+                      type="button"
+                      onClick={handleClearOwner}
+                      className="px-3 py-2 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Clear owner (sets cost to $0)"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
                 {isMemberOpen && (
                   <div className="absolute z-10 bg-bg-white border border-border-light rounded-lg shadow-lg w-full mt-1 max-h-[260px] overflow-y-auto scrollbar-hide">
                     {members.length === 0 ? (
@@ -407,7 +441,12 @@ export function ParkingSlotForm({ slot, onSave, onCancel, onDelete, totalSlots =
                   </div>
                 )}
               </div>
-              {errors.memberId && <p className="text-xs text-red-500 mt-0.5">{errors.memberId}</p>}
+              {!formData.memberId && (
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  No owner assigned - Monthly fee will be $0 (no one to pay)
+                </p>
+              )}
             </div>
 
             <div>
@@ -504,7 +543,11 @@ export function ParkingSlotForm({ slot, onSave, onCancel, onDelete, totalSlots =
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-600 font-medium">Free</span>
                 )}
               </div>
-              <p className="text-xs text-text-secondary mt-1">Price is set automatically based on vehicle type</p>
+              <p className="text-xs text-text-secondary mt-1">
+                {formData.memberId 
+                  ? 'Price is set automatically based on vehicle type' 
+                  : 'No owner assigned - cost is $0 (no one to pay)'}
+              </p>
             </div>
 
             <div>
