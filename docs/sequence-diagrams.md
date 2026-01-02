@@ -260,7 +260,10 @@ sequenceDiagram
     participant Admin as Admin
     participant View as HouseholdsView<br/><<Boundary>>
     participant Controller as HouseholdController<br/><<Control>>
-    participant Model as Household<br/><<Entity>>
+    participant PaymentModel as Payment<br/><<Entity>>
+    participant UtilityModel as UtilityBill<br/><<Entity>>
+    participant ParkingModel as ParkingSlot<br/><<Entity>>
+    participant HouseholdModel as Household<br/><<Entity>>
     
     Admin->>View: Click "Delete" trên hộ
     View->>View: Hiển thị dialog xác nhận
@@ -268,11 +271,25 @@ sequenceDiagram
     
     View->>Controller: DELETE /api/households/{id}
     
-    Controller->>Model: delete({id})
-    Note over Model: Cascade delete:<br/>- Payments<br/>- UtilityBills<br/>- Members (set null)
+    Controller->>PaymentModel: findMany({householdId, status: pending/overdue})
+    PaymentModel-->>Controller: unpaidPayments
     
-    Model-->>Controller: Deleted
-    Controller-->>View: 200 - Deleted successfully
+    Controller->>UtilityModel: findMany({householdId, status: pending/overdue})
+    UtilityModel-->>Controller: unpaidUtilityBills
+    
+    Controller->>ParkingModel: findMany({householdId, status: occupied})
+    ParkingModel-->>Controller: activeParkingSlots
+    
+    alt Có bills chưa thanh toán
+        Controller-->>View: 400 - {error, hasUnpaidBills: true,<br/>unpaidPayments, unpaidUtilityBills,<br/>activeParkingSlots, details}
+        View-->>Admin: Hiển thị lỗi: "Cannot delete household with unpaid bills"
+    end
+    
+    Controller->>HouseholdModel: delete({id})
+    Note over HouseholdModel: Cascade delete (Prisma schema):<br/>- Payments<br/>- UtilityBills<br/>- Members householdId = null
+    
+    HouseholdModel-->>Controller: Deleted
+    Controller-->>View: 200 - {message: "Household deleted successfully"}
     
     View->>View: Remove từ danh sách
     View-->>Admin: Thông báo đã xóa
@@ -300,7 +317,7 @@ sequenceDiagram
     Admin->>View: Nhập thông tin<br/>(name, dateOfBirth, cccd, residenceType, relationToOwner)
     View->>Controller: POST /api/members
     
-    Controller->>Controller: Validate required fields
+    Controller->>Controller: Validate required fields<br/>(name, dateOfBirth, cccd)
     
     Controller->>MemberModel: findUnique({cccd})
     alt CCCD đã tồn tại
@@ -320,9 +337,7 @@ sequenceDiagram
     Controller->>MemberModel: create(member)
     MemberModel-->>Controller: New member
     
-    alt relationToOwner = "self"
-        Controller->>HouseholdModel: update household.ownerId
-    end
+    Note over Controller: owner không tự động được gán<br/>Phải update household.ownerId<br/>thủ công qua HouseholdForm
     
     Controller-->>View: 201 - Member created
     View-->>Admin: Thông báo thành công
@@ -388,7 +403,7 @@ sequenceDiagram
     Admin->>View: Nhập thông tin<br/>(name, amount, frequency, description)
     View->>Controller: POST /api/fee-categories
     
-    Controller->>Controller: Validate required fields
+    Controller->>Controller: Validate required fields<br/>(name, amount, frequency)
     
     Controller->>Model: findUnique({name})
     alt Tên đã tồn tại
@@ -487,11 +502,14 @@ sequenceDiagram
     Controller->>Controller: Validate required fields<br/>(householdId, feeCategoryId, amount, dueDate)
     
     Controller->>Controller: Begin Transaction
-    Controller->>PaymentModel: create(payment)
-    Controller->>HouseholdModel: update(household.balance += amount)
-    Controller->>Controller: Commit Transaction
+    Controller->>PaymentModel: create(payment with status = pending/collected)
     
-    Note over PaymentModel,HouseholdModel: Tạo payment với status = pending<br/>Tăng balance của household
+    alt status !== 'collected'
+        Controller->>HouseholdModel: update(household.balance += amount)
+        Note over HouseholdModel: Chỉ tăng balance nếu chưa collected
+    end
+    
+    Controller->>Controller: Commit Transaction
     
     PaymentModel-->>Controller: Transaction success
     Controller-->>View: 201 - Payment created
@@ -507,16 +525,15 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     participant Admin as Admin
-    participant View as HouseholdPaymentCard<br/><<Boundary>>
+    participant View as FeeCollectionView<br/><<Boundary>>
     participant Controller as PaymentController<br/><<Control>>
     participant PaymentModel as Payment<br/><<Entity>>
     participant HouseholdModel as Household<br/><<Entity>>
     
     Admin->>View: Click "Mark as Paid" trên khoản phí
-    View->>View: Hiển thị dialog xác nhận<br/>(chọn phương thức thanh toán)
     
-    Admin->>View: Xác nhận thu phí
     View->>Controller: PUT /api/payments/{id}<br/>{status: 'collected', paymentMethod: 'cash'}
+    Note over View: Mặc định payment method = 'cash'
     
     Controller->>PaymentModel: findUnique(current payment)
     PaymentModel-->>Controller: Payment with oldStatus, oldAmount
@@ -525,7 +542,7 @@ sequenceDiagram
     Note over Controller: Nếu pending/overdue -> collected<br/>balanceAdjustment = -amount
     
     Controller->>Controller: Begin Transaction
-    Controller->>PaymentModel: update(payment.status = 'collected',<br/>payment.paymentDate = now())
+    Controller->>PaymentModel: update(payment.status = 'collected',<br/>payment.paymentDate = now(),<br/>payment.paymentMethod = 'cash')
     Controller->>HouseholdModel: update(household.balance -= amount)
     Controller->>Controller: Commit Transaction
     
@@ -535,6 +552,8 @@ sequenceDiagram
     View->>View: Cập nhật UI:<br/>- Đổi màu badge<br/>- Cập nhật balance
     View-->>Admin: Thông báo thu phí thành công
 ```
+
+Note: Phương thức thanh toán có thể thay đổi khi chỉnh sửa payment qua PaymentForm.
 
 ### 5.4 Tạo Phí Hàng Tháng Cho Tất Cả Hộ
 
@@ -562,12 +581,12 @@ sequenceDiagram
     Controller->>HouseholdModel: findMany(active households)
     HouseholdModel-->>Controller: List of active households
     
-    Controller->>Controller: Calculate dueDate<br/>(cuối tháng được chọn)
+    Controller->>Controller: Calculate dueDate<br/>(new Date(year, month + 1, 0) - cuối tháng)
     
     Controller->>Controller: Begin Transaction
     loop For each household
-        Controller->>PaymentModel: create(payment)
-        Controller->>HouseholdModel: update(household.balance += amount)
+        Controller->>PaymentModel: create({householdId, feeCategoryId,<br/>amount: category.amount, dueDate, status: 'pending'})
+        Controller->>HouseholdModel: update(household.balance += category.amount)
     end
     Controller->>Controller: Commit Transaction
     
@@ -725,7 +744,7 @@ sequenceDiagram
     
     View->>Controller: POST /api/utilities
     
-    Controller->>Controller: Validate required fields
+    Controller->>Controller: Validate required fields<br/>(householdId, month)
     Controller->>Controller: Calculate period dates
     
     Controller->>Model: create({<br/>  householdId, month,<br/>  periodStart, periodEnd, dueDate,<br/>  electricityUsage, electricityRate, electricityCost,<br/>  waterUsage, waterRate, waterCost,<br/>  internetCost, totalAmount,<br/>  status: 'pending'<br/>})
@@ -837,7 +856,7 @@ sequenceDiagram
     Admin->>View: Nhập thông tin<br/>(username, password, name, email, role)
     View->>Controller: POST /api/users
     
-    Controller->>Controller: Validate required fields
+    Controller->>Controller: Validate required fields<br/>(username, password, name, email)
     
     Controller->>Model: findFirst({username OR email})
     alt Đã tồn tại
@@ -849,7 +868,7 @@ sequenceDiagram
     Controller->>AuthService: hashPassword(password)
     AuthService-->>Controller: Hashed password
     
-    Controller->>Model: create({username, hashedPassword, name, email, role})
+    Controller->>Model: create({username, hashedPassword, name, email,<br/>role: role || 'staff'})
     Model-->>Controller: New user
     
     Controller-->>View: 201 - User created
@@ -873,6 +892,14 @@ sequenceDiagram
     Admin->>View: Nhập mật khẩu cũ và mới
     
     View->>Controller: POST /api/users/change-password<br/>{userId, currentPassword, newPassword}
+    
+    Controller->>Controller: Validate required fields<br/>(userId, currentPassword, newPassword)
+    
+    Controller->>Controller: Validate newPassword.length >= 6
+    alt Mật khẩu mới quá ngắn
+        Controller-->>View: 400 - New password must be at least 6 characters
+        View-->>Admin: Hiển thị lỗi
+    end
     
     Controller->>Model: findUnique({userId})
     alt User không tồn tại
