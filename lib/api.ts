@@ -95,7 +95,10 @@ export const feeCategoriesApi = {
 
 // Payments API
 export const paymentsApi = {
-  getAll: (params?: { status?: string; householdId?: string; categoryId?: string }) => {
+  getAll: async (params?: { status?: string; householdId?: string; categoryId?: string }) => {
+    // First, update any pending payments that are now overdue
+    await apiCall<any>('/payments/update-overdue', { method: 'POST' }).catch(() => {})
+    
     const searchParams = new URLSearchParams()
     if (params?.status) searchParams.set('status', params.status)
     if (params?.householdId) searchParams.set('householdId', params.householdId)
@@ -103,6 +106,9 @@ export const paymentsApi = {
     const query = searchParams.toString()
     return apiCall<any[]>(`/payments${query ? `?${query}` : ''}`)
   },
+
+  updateOverdue: () =>
+    apiCall<{ message: string; count: number }>('/payments/update-overdue', { method: 'POST' }),
 
   getById: (id: string) =>
     apiCall<any>(`/payments/${id}`),
@@ -145,7 +151,10 @@ export const parkingApi = {
 
 // Utilities API
 export const utilitiesApi = {
-  getAll: (params?: { status?: string; type?: string; householdId?: string }) => {
+  getAll: async (params?: { status?: string; type?: string; householdId?: string }) => {
+    // First, update any pending utility bills that are now overdue
+    await apiCall<any>('/utilities/update-overdue', { method: 'POST' }).catch(() => {})
+    
     const searchParams = new URLSearchParams()
     if (params?.status) searchParams.set('status', params.status)
     if (params?.type) searchParams.set('type', params.type)
@@ -153,6 +162,9 @@ export const utilitiesApi = {
     const query = searchParams.toString()
     return apiCall<any[]>(`/utilities${query ? `?${query}` : ''}`)
   },
+
+  updateOverdue: () =>
+    apiCall<{ message: string; count: number }>('/utilities/update-overdue', { method: 'POST' }),
 
   getById: (id: string) =>
     apiCall<any>(`/utilities/${id}`),

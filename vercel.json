@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/payments/update-overdue",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/utilities/update-overdue",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
