@@ -1,10 +1,15 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Check, X, Plus } from 'lucide-react';
+import { ChevronDown, Check, X, Plus, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { householdsApi } from '@/lib/api';
 import type { UtilityBill } from '../UtilitiesView';
+
+const monthNames = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
 
 interface UtilityBillFormProps {
   bill: UtilityBill | null;
@@ -12,12 +17,32 @@ interface UtilityBillFormProps {
   onCancel: () => void;
 }
 
+// Parse month string to get month index and year
+const parseMonthString = (monthStr: string): { month: number; year: number } => {
+  const currentDate = new Date();
+  if (!monthStr) {
+    return { month: currentDate.getMonth(), year: currentDate.getFullYear() };
+  }
+  const parts = monthStr.split(' ');
+  if (parts.length === 2) {
+    const monthIndex = monthNames.findIndex(m => m.toLowerCase() === parts[0].toLowerCase());
+    const year = parseInt(parts[1], 10);
+    if (monthIndex !== -1 && !isNaN(year)) {
+      return { month: monthIndex, year };
+    }
+  }
+  return { month: currentDate.getMonth(), year: currentDate.getFullYear() };
+};
+
 export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps) {
+  const currentDate = new Date();
+  const initialPeriod = parseMonthString(bill?.month || '');
+  
   const [formData, setFormData] = useState({
     householdId: bill?.householdId || '',
     unit: bill?.unit || '',
     ownerName: bill?.ownerName || '',
-    month: bill?.month || '',
+    month: bill?.month || `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`,
     electricityUsage: bill?.electricityUsage?.toString() || '',
     electricityRate: bill?.electricityRate?.toString() || '0.15', // $0.15 per kWh
     waterUsage: bill?.waterUsage?.toString() || '',
@@ -26,6 +51,17 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
     status: bill?.status || 'pending',
     phone: bill?.phone || '',
   });
+  
+  // Separate state for month/year selectors
+  const [selectedMonth, setSelectedMonth] = useState<number>(initialPeriod.month);
+  const [selectedYear, setSelectedYear] = useState<number>(initialPeriod.year);
+  const [isMonthOpen, setIsMonthOpen] = useState(false);
+  const [isYearOpen, setIsYearOpen] = useState(false);
+  const monthDropdownRef = useRef<HTMLDivElement>(null);
+  const yearDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Generate years array (current year and 5 years back, plus 1 year forward)
+  const years = Array.from({ length: 7 }, (_, i) => currentDate.getFullYear() - 5 + i);
 
   const [households, setHouseholds] = useState<{ id: string; unit: string; ownerName: string; phone: string }[]>([]);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -68,6 +104,12 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
     loadHouseholds();
   }, [bill]);
 
+  // Update formData.month when selectedMonth or selectedYear changes
+  useEffect(() => {
+    const newMonth = `${monthNames[selectedMonth]} ${selectedYear}`;
+    setFormData(prev => ({ ...prev, month: newMonth }));
+  }, [selectedMonth, selectedYear]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,6 +118,12 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
       }
       if (householdRef.current && !householdRef.current.contains(event.target as Node)) {
         setIsHouseholdOpen(false);
+      }
+      if (monthDropdownRef.current && !monthDropdownRef.current.contains(event.target as Node)) {
+        setIsMonthOpen(false);
+      }
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target as Node)) {
+        setIsYearOpen(false);
       }
     };
 
@@ -288,21 +336,75 @@ export function UtilityBillForm({ bill, onSave, onCancel }: UtilityBillFormProps
                 <label className="block text-sm font-medium text-text-primary mb-2">
                   Billing Period *
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={formData.month}
-                    onChange={(e) => handleChange('month', e.target.value)}
-                    className={`input-default text-sm pr-10 ${formData.month.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.month ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                    placeholder="e.g., December 2025"
-                    required
-                  />
-                  {formData.month.trim().length > 0 && (
-                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
-                  )}
-                  {formData.month.trim().length === 0 && errors.month && (
-                    <X className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-500" />
-                  )}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Month Selector */}
+                  <div className="relative" ref={monthDropdownRef}>
+                    <button
+                      type="button"
+                      className={`input-default text-sm flex items-center justify-between w-full ${formData.month.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.month ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                      onClick={() => setIsMonthOpen(!isMonthOpen)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-text-secondary" />
+                        <span className="text-text-primary">{monthNames[selectedMonth]}</span>
+                      </div>
+                      <ChevronDown className={`size-4 text-text-secondary transition-transform ${isMonthOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isMonthOpen && (
+                      <div className="absolute z-10 bg-bg-white border border-border-light rounded-lg shadow-lg w-full mt-1 overflow-hidden max-h-60 overflow-y-auto scrollbar-hide">
+                        {monthNames.map((month, index) => (
+                          <div
+                            key={month}
+                            className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm transition-colors ${
+                              selectedMonth === index ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'
+                            }`}
+                            onClick={() => {
+                              setSelectedMonth(index);
+                              setIsMonthOpen(false);
+                              if (errors.month) {
+                                setErrors(prev => ({ ...prev, month: '' }));
+                              }
+                            }}
+                          >
+                            {month}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Year Selector */}
+                  <div className="relative" ref={yearDropdownRef}>
+                    <button
+                      type="button"
+                      className={`input-default text-sm flex items-center justify-between w-full ${formData.month.trim().length > 0 ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : errors.month ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
+                      onClick={() => setIsYearOpen(!isYearOpen)}
+                    >
+                      <span className="text-text-primary">{selectedYear}</span>
+                      <ChevronDown className={`size-4 text-text-secondary transition-transform ${isYearOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isYearOpen && (
+                      <div className="absolute z-10 bg-bg-white border border-border-light rounded-lg shadow-lg w-full mt-1 overflow-hidden max-h-60 overflow-y-auto scrollbar-hide">
+                        {years.map((year) => (
+                          <div
+                            key={year}
+                            className={`px-4 py-3 cursor-pointer hover:bg-bg-hover text-sm transition-colors ${
+                              selectedYear === year ? 'bg-brand-primary/10 text-brand-primary font-medium' : 'text-text-primary'
+                            }`}
+                            onClick={() => {
+                              setSelectedYear(year);
+                              setIsYearOpen(false);
+                              if (errors.month) {
+                                setErrors(prev => ({ ...prev, month: '' }));
+                              }
+                            }}
+                          >
+                            {year}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {errors.month && <p className="mt-0.5 text-sm text-red-500">{errors.month}</p>}
               </div>
